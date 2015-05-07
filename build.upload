@@ -1,0 +1,146 @@
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'signing'
+apply plugin: 'checkstyle'
+
+sourceCompatibility = 1.6
+targetCompatibility = 1.6
+
+repositories {
+  mavenCentral()
+  maven {
+    url 'https://oss.sonatype.org/content/repositories/snapshots/'
+  }
+}
+
+dependencies {
+  testCompile group: 'junit', name: 'junit', version: '4.12'
+
+  compile (
+    "org.threadly:threadly:$threadlyVersion"
+  )
+}
+
+compileJava {
+  options.compilerArgs << "-Xlint:all" << "-Xlint:-deprecation" << "-Werror"
+  
+  String[] java6Paths = new String[5]
+  java6Paths[0] = "/usr/lib/jvm/java-6-openjdk-amd64/jre/lib/rt.jar"
+  java6Paths[1] = "/usr/lib/jvm/java-6-openjdk/jre/lib/rt.jar"
+  java6Paths[2] = "/usr/lib/jvm/java-1.6.0-openjdk-amd64/jre/lib/rt.jar"
+  java6Paths[3] = "/usr/lib/jvm/java-1.6.0-openjdk/jre/lib/rt.jar"
+  java6Paths[4] = "/usr/lib/jvm/java-6-sun/jre/lib/rt.jar"
+  for (String path : java6Paths) {
+    if (new java.io.File(path).exists()) {
+      println 'Using java 6 rt.jar: ' + path
+      options.bootClasspath = path
+      break
+    }
+  }
+  if (options.bootClasspath == null) {
+    println 'Unable to find java 6 rt.jar, will cause failure so exiting now'
+    println ''
+    System.exit(1)
+  }
+}
+
+compileTestJava {
+  options.compilerArgs << "-Xlint:all" << "-Xlint:-deprecation" << "-Werror"
+  
+  String[] java6Paths = new String[5]
+  java6Paths[0] = "/usr/lib/jvm/java-6-openjdk-amd64/jre/lib/rt.jar"
+  java6Paths[1] = "/usr/lib/jvm/java-6-openjdk/jre/lib/rt.jar"
+  java6Paths[2] = "/usr/lib/jvm/java-1.6.0-openjdk-amd64/jre/lib/rt.jar"
+  java6Paths[3] = "/usr/lib/jvm/java-1.6.0-openjdk/jre/lib/rt.jar"
+  java6Paths[4] = "/usr/lib/jvm/java-6-sun/jre/lib/rt.jar"
+  for (String path : java6Paths) {
+    if (new java.io.File(path).exists()) {
+      options.bootClasspath = path
+      break
+    }
+  }
+}
+
+plugins.withType(JavaPlugin) {
+  checkstyle.sourceSets = [sourceSets.main]
+}
+
+test {
+  getReports().getJunitXml().setDestination(file("$buildDir/test-results/xml"))
+}
+
+jar {
+  manifest {
+    attributes 'Implementation-Title': 'Ambush', 'Implementation-Version': version
+  }
+}
+
+javadoc {
+  source = sourceSets.main.allJava
+  options.memberLevel = org.gradle.external.javadoc.JavadocMemberLevel.PUBLIC
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+  classifier = 'javadoc'
+  from 'build/docs/javadoc'
+}
+
+task sourcesJar(type: Jar) {
+  from sourceSets.main.allSource
+  classifier = 'sources'
+}
+
+artifacts {
+  archives jar
+  archives javadocJar
+  archives sourcesJar
+}
+
+signing {
+  sign configurations.archives
+}
+
+uploadArchives {
+  repositories {
+    mavenDeployer {
+      beforeDeployment {
+        MavenDeployment deployment -> signing.signPom(deployment)
+      }
+ 
+      repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+        authentication(userName: sonatypeUsername, password: sonatypePassword)
+      }
+      snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots") {
+        authentication(userName: sonatypeUsername, password: sonatypePassword)
+      }
+ 
+      pom.project {
+        name 'Ambush'
+        packaging 'jar'
+        description 'A unique java library for structuring and driving performance load tests.  What makes this so unique is the belief that what is describing how test code runs, should be the same language/closely connected with the tool which helps structure those actions and executes those actions.'
+        url 'http://threadly.org/'
+ 
+        scm {
+          url 'scm:git@github.com:threadly/ambush.git'
+          connection 'scm:git@github.com:threadly/ambush.git'
+          developerConnection 'scm:git@github.com:threadly/ambush.git'
+        }
+ 
+        licenses {
+          license {
+            name 'Mozilla Public License Version 2.0'
+            url 'https://www.mozilla.org/MPL/2.0/'
+            distribution 'repo'
+          }
+        }
+ 
+        developers {
+          developer {
+            id 'jent'
+            name 'Mike Jensen'
+          }
+        }
+      }
+    }
+  }
+}

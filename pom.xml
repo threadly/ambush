@@ -1,0 +1,40 @@
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.threadly</groupId>
+  <artifactId>ambush</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name></name>
+  <description>A unique java library for structuring and driving performance load tests. What makes this so unique is the belief that what is describing how test code runs, should be the same language/closely connected with the tool which helps structure those actions and executes those actions.</description>
+  <url>http://threadly.org</url>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.threadly</groupId>
+      <artifactId>threadly</artifactId>
+      <version>4.0.0-SNAPSHOT</version>
+    </dependency>
+  </dependencies>
+
+  <licenses>
+    <license>
+      <name>Mozilla Public License Version 2.0</name>
+      <url>https://www.mozilla.org/MPL/2.0/</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <scm>
+    <connection>scm:git:git@github.com:threadly/ambush.git</connection>
+    <developerConnection>scm:git:git@github.com:threadly/ambush.git</developerConnection>
+    <url>git@github.com:threadly/ambush.git</url>
+  </scm>
+
+  <developers>
+    <developer>
+      <id>jent</id>
+      <name>Mike Jensen</name>
+    </developer>
+  </developers>
+</project>
