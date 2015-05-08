@@ -5,6 +5,7 @@ import static org.junit.Assert.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -73,7 +74,7 @@ public class SimpleExecutionGraphTest {
         try {
           futures.get(i).get();
           fail("Exception should have thrown");
-        } catch (ExecutionException e) {
+        } catch (CancellationException e) {
           // expected
         }
       }
@@ -179,7 +180,7 @@ public class SimpleExecutionGraphTest {
         try {
           futures.get(i).get();
           fail("Exception should have thrown");
-        } catch (ExecutionException e) {
+        } catch (CancellationException e) {
           // expected
         }
       }

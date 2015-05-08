@@ -3,6 +3,8 @@ package org.threadly.load;
 import java.util.Iterator;
 import java.util.concurrent.Executor;
 
+import org.threadly.concurrent.future.FutureUtils;
+
 /**
  * <p>A builder which's added steps will all be executed in sequence.</p>
  * 
@@ -56,8 +58,13 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
    */
   @Override
   public void addStep(TestStepInterface step) {
+    addStep(new TestStepWrapper(step));
+  }
+  
+  @Override
+  protected void addStep(TestChainItem step) {
     verifyValid();
-    currentStep.addItem(new TestStepWrapper(step));
+    currentStep.addItem(step);
   }
   
   /**
@@ -70,6 +77,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
   @Override
   public void addSteps(SequentialScriptBuilder sequentialSteps) {
     verifyValid();
+    maybeUpdatedMaximumThreads(sequentialSteps.getMaximumThreadsNeeded() + 1);
     Iterator<TestChainItem> it = sequentialSteps.currentStep.steps.iterator();
     while (it.hasNext()) {
       currentStep.addItem(it.next());
@@ -86,9 +94,8 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
    */
   @Override
   public void addSteps(ParallelScriptBuilder parallelSteps) {
-    verifyValid();
     maybeUpdatedMaximumThreads(parallelSteps.getMaximumThreadsNeeded() + 1);
-    currentStep.addItem(parallelSteps.currentStep);
+    addStep(parallelSteps.currentStep);
   }
   
   /**
@@ -104,7 +111,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
     }
     
     @Override
-    public void runChainItem(Executor executor) {
+    public void runChainItem(AbstractScriptBuilder runningScriptBuilder, Executor executor) {
       testStepRunner.run();
     }
   }
@@ -117,15 +124,15 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
   // TODO - can this be put into StepCollectionRunner
   protected static class SequentialStep extends StepCollectionRunner {
     @Override
-    public void runSteps(final Executor executor) {
+    public void runChainItem(AbstractScriptBuilder runningScriptBuilder, final Executor executor) {
       Iterator<TestChainItem> it = steps.iterator();
       while (it.hasNext()) {
         TestChainItem chainItem = it.next();
-        chainItem.runChainItem(executor);
+        chainItem.runChainItem(runningScriptBuilder, executor);
         // this call will block till execution is done, thus making us wait to run the next chain item
         try {
-          if (getFailedResult(chainItem.getFutures()) != null) {
-            markUncompleteAsFailure(getFutures());
+          if (TestResultCollectionUtils.getFailedResult(chainItem.getFutures()) != null) {
+            FutureUtils.cancelIncompleteFutures(getFutures(), true);
             return;
           }
         } catch (InterruptedException e) {

@@ -2,11 +2,12 @@ package org.threadly.load;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.threadly.concurrent.PriorityScheduler;
 import org.threadly.concurrent.future.FutureUtils;
@@ -21,14 +22,15 @@ import org.threadly.util.Clock;
  * @author jent - Mike Jensen
  */
 public abstract class AbstractScriptBuilder {
-  protected final Collection<StepCollectionRunner> stepRunners;
+  protected final Collection<TestChainItem> stepRunners;
   private final AtomicBoolean finalized;
+  private final AtomicReference<List<? extends ListenableFuture<TestResult>>> runningFutureSet;
   private int maximumThreadsNeeded;
   private Exception replacementException = null;
 
   protected AbstractScriptBuilder(AbstractScriptBuilder sourceBuilder) {
     if (sourceBuilder == null) {
-      stepRunners = new ArrayList<StepCollectionRunner>();
+      stepRunners = new ArrayList<TestChainItem>();
       maximumThreadsNeeded = 1;
     } else {
       sourceBuilder.replaced();
@@ -36,6 +38,36 @@ public abstract class AbstractScriptBuilder {
       this.maximumThreadsNeeded = sourceBuilder.maximumThreadsNeeded;
     }
     this.finalized = new AtomicBoolean(false);
+    runningFutureSet = new AtomicReference<List<? extends ListenableFuture<TestResult>>>(null);
+  }
+  
+  /**
+   * Adds a step in the current test position which will log out the percent of completion for the 
+   * entire test script.  The provided future will complete once the test has reached this point 
+   * in the script.  The resulting double provided by the future is the percent of completion at 
+   * this moment.  You can easily log this by adding a 
+   * {@link org.threadly.concurrent.future.FutureCallback} to the returned future.  
+   * 
+   * If there are steps running in parallel at the time of execution for this progress future it 
+   * should be noted the number is a best guess, as no locking occurs during determining the 
+   * current progress.
+   * 
+   * @return A future which provide a double representing the percent of how much of the script has completed
+   */
+  public ListenableFuture<Double> addProgressFuture() {
+    SettableListenableFuture<Double> slf = new SettableListenableFuture<Double>();
+    addStep(new ProgressTestStep(slf));
+    return slf;
+  }
+  
+  /**
+   * Returns the list of futures for the current test script run.  If not currently running this 
+   * will be null.
+   * 
+   * @return List of futures that will complete for the current execution
+   */
+  protected List<? extends ListenableFuture<TestResult>> getRunningFutureSet() {
+    return runningFutureSet.get();
   }
 
   /**
@@ -70,6 +102,14 @@ public abstract class AbstractScriptBuilder {
    * @param step Test step to add to builder
    */
   public abstract void addStep(TestStepInterface step);
+  
+  /**
+   * Add a {@link TestChainItem} to this builder.  This is a private API so that we can add test 
+   * steps which need access to the executing {@link AbstractScriptBuilder}.
+   * 
+   * @param chainItem Item to add to current execution chain
+   */
+  protected abstract void addStep(TestChainItem chainItem);
 
   /**
    * Add a sequential series of steps to this builder.  Since the behavior of this depends on the 
@@ -137,9 +177,10 @@ public abstract class AbstractScriptBuilder {
    * If a step was never executed due to a failure, those futures will be resolved in an error 
    * (thus calls to {@link ListenableFuture#get()} will throw a 
    * {@link java.util.concurrent.ExecutionException}).  You can use 
-   * {@link #getFailedResult(Collection)} to see if any steps failed.  This will block till 
-   * all steps have completed (or a failed test step occurred).  If 
-   * {@link #getFailedResult(Collection)} returns null, then the test completed without error. 
+   * {@link TestResultCollectionUtils#getFailedResult(Collection)} to see if any steps failed.  
+   * This will block till all steps have completed (or a failed test step occurred).  If 
+   * {@link TestResultCollectionUtils#getFailedResult(Collection)} returns null, then the test 
+   * completed without error. 
    * 
    * @return A collection of futures which will represent each execution step
    */
@@ -147,10 +188,13 @@ public abstract class AbstractScriptBuilder {
     maybeFinalize();
     
     final List<SettableListenableFuture<TestResult>> result = new ArrayList<SettableListenableFuture<TestResult>>();
+    if (! runningFutureSet.compareAndSet(null, result)) {
+      throw new IllegalStateException("Script already running in parallel");
+    }
     final PriorityScheduler scheduler = new PriorityScheduler(maximumThreadsNeeded + 1);
     scheduler.prestartAllThreads();
     
-    Iterator<StepCollectionRunner> it = stepRunners.iterator();
+    Iterator<TestChainItem> it = stepRunners.iterator();
     while (it.hasNext()) {
       result.addAll(it.next().getFutures());
     }
@@ -159,14 +203,14 @@ public abstract class AbstractScriptBuilder {
     scheduler.execute(new Runnable() {
       @Override
       public void run() {
-        Iterator<StepCollectionRunner> it = stepRunners.iterator();
+        Iterator<TestChainItem> it = stepRunners.iterator();
         while (it.hasNext()) {
-          StepCollectionRunner stepRunner = it.next();
-          stepRunner.runSteps(scheduler);
+          TestChainItem stepRunner = it.next();
+          stepRunner.runChainItem(AbstractScriptBuilder.this, scheduler);
           // this call will block till the step is done, thus preventing execution of the next step
           try {
-            if (getFailedResult(stepRunner.getFutures()) != null) {
-              markUncompleteAsFailure(result);
+            if (TestResultCollectionUtils.getFailedResult(stepRunner.getFutures()) != null) {
+              FutureUtils.cancelIncompleteFutures(result, true);
               return;
             }
           } catch (InterruptedException e) {
@@ -184,6 +228,7 @@ public abstract class AbstractScriptBuilder {
     FutureUtils.makeCompleteFuture(result).addListener(new Runnable() {
       @Override
       public void run() {
+        runningFutureSet.set(null);
         scheduler.shutdown();
       }
     });
@@ -192,50 +237,45 @@ public abstract class AbstractScriptBuilder {
   }
   
   /**
-   * Looks through collection of futures looking for any {@link TestResult}'s that are in a failure 
-   * state.  Once it finds the first one it returns it.  If this was a parallel step, it is 
-   * possible there are additional failures not returned (it just returns the first failure it 
-   * finds).  This call blocks until all the test steps have completed, and if none are in a 
-   * failure state, it will return {@code null}.
+   * <p>Test step which will report the current running test progress.</p>
    * 
-   * @param futures Future collection to iterate over and inspect
-   * @return Failed TestResult or {@code null} if no failures occurred
-   * @throws InterruptedException Thrown if the thread is interrupted while waiting for {@link TestResult}
+   * @author jent - Mike Jensen
    */
-  protected static TestResult getFailedResult(Collection<? extends ListenableFuture<TestResult>> futures) 
-      throws InterruptedException {
-    Iterator<? extends ListenableFuture<TestResult>> it = futures.iterator();
-    while (it.hasNext()) {
-      try {
-        TestResult tr = it.next().get();
-        if (tr.getError() != null) {
-          return tr;
-        }
-      } catch (ExecutionException e) {
-        // should not be possible
-        throw new RuntimeException(e);
-      }
+  private static class ProgressTestStep implements TestChainItem {
+    private static final Collection<? extends SettableListenableFuture<TestResult>> FUTURE;
+    
+    static {
+      List<SettableListenableFuture<TestResult>> futures;
+      futures = new ArrayList<SettableListenableFuture<TestResult>>(1);
+      SettableListenableFuture<TestResult> slf = new SettableListenableFuture<TestResult>();
+      slf.setResult(new TestResult(ProgressTestStep.class.getName(), 0));
+      
+      FUTURE = Collections.unmodifiableList(futures);
     }
     
-    return null;
-  }
-  
-  /**
-   * Will set any futures which have not completed as failure with the provided failure.
-   * 
-   * @param futures List of futures to iterate over looking for uncompleted {@link SettableListenableFuture}
-   */
-  protected static void markUncompleteAsFailure(Collection<? extends SettableListenableFuture<TestResult>> futures) {
-    Exception failure = null;
-    Iterator<? extends SettableListenableFuture<TestResult>> it = futures.iterator();
-    while (it.hasNext()) {
-      SettableListenableFuture<TestResult> future = it.next();
-      if (! future.isDone()) {
-        if (failure == null) {
-          failure = new Exception();
+    private final SettableListenableFuture<Double> slf;
+
+    public ProgressTestStep(SettableListenableFuture<Double> slf) {
+      this.slf = slf;
+    }
+
+    @Override
+    public void runChainItem(AbstractScriptBuilder runningScriptBuilder, Executor executor) {
+      List<? extends ListenableFuture<?>> scriptFutures = runningScriptBuilder.getRunningFutureSet();
+      double doneCount = 0;
+      Iterator<? extends ListenableFuture<?>> it = scriptFutures.iterator();
+      while (it.hasNext()) {
+        if (it.next().isDone()) {
+          doneCount++;
         }
-        future.setFailure(failure);
       }
+      
+      slf.setResult((doneCount / scriptFutures.size()) * 100);
+    }
+
+    @Override
+    public Collection<? extends SettableListenableFuture<TestResult>> getFutures() {
+      return FUTURE;
     }
   }
   
@@ -246,7 +286,7 @@ public abstract class AbstractScriptBuilder {
    * @author jent - Mike Jensen
    */
   protected interface TestChainItem {
-    public abstract void runChainItem(Executor executor);
+    public abstract void runChainItem(AbstractScriptBuilder runningScriptBuilder, Executor executor);
 
     public abstract Collection<? extends SettableListenableFuture<TestResult>> getFutures();
   }
@@ -257,7 +297,7 @@ public abstract class AbstractScriptBuilder {
    * 
    * @author jent - Mike Jensen
    */
-  protected static class StepCollectionRunner implements TestChainItem {
+  protected abstract static class StepCollectionRunner implements TestChainItem {
     protected final List<TestChainItem> steps;
     private final List<SettableListenableFuture<TestResult>> futures;
     
@@ -275,21 +315,12 @@ public abstract class AbstractScriptBuilder {
     public Collection<? extends SettableListenableFuture<TestResult>> getFutures() {
       return futures;
     }
-
-    @Override
-    public void runChainItem(Executor executor) {
-      runSteps(executor);
-    }
     
-    /**
-     * Runs all steps in the collection.
-     * 
-     * @param executor Executor to use if needed to farm out execution
-     */
-    public void runSteps(Executor executor) {
+    @Override
+    public void runChainItem(AbstractScriptBuilder runningScriptBuilder, Executor executor) {
       Iterator<TestChainItem> it = steps.iterator();
       while (it.hasNext()) {
-        it.next().runChainItem(executor);
+        it.next().runChainItem(runningScriptBuilder, executor);
       }
     }
   }
@@ -306,9 +337,6 @@ public abstract class AbstractScriptBuilder {
     public AbstractTestStepWrapper(TestStepInterface testStep) {
       testStepRunner = new TestStepRunner(testStep);
     }
-    
-    @Override
-    public abstract void runChainItem(Executor executor);
 
     @Override
     public Collection<SettableListenableFuture<TestResult>> getFutures() {
@@ -335,14 +363,22 @@ public abstract class AbstractScriptBuilder {
     
     @Override
     public void run() {
+      setRunningThread(Thread.currentThread());
+      
       long startNanos = Clock.systemNanoTime();
+      TestResult result;
       try {
         testStep.runTest();
         long endNanos = Clock.systemNanoTime();
-        setResult(new TestResult(testStep.getIdentifier(), endNanos - startNanos));
+        result = new TestResult(testStep.getIdentifier(), endNanos - startNanos);
       } catch (Throwable t) {
         long endNanos = Clock.systemNanoTime();
-        setResult(new TestResult(testStep.getIdentifier(), endNanos - startNanos, t));
+        result = new TestResult(testStep.getIdentifier(), endNanos - startNanos, t);
+      }
+      try {
+        setResult(result);
+      } catch (IllegalStateException e) {
+        // it's possible the future is canceled due to failure at the same time it's completing
       }
     }
   }

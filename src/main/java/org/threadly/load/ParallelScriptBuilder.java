@@ -68,9 +68,10 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
     addStep(step, 1);
   }
   
-  private void incrementThreads(int value) {
-    threadsNeeded += value;
-    maybeUpdatedMaximumThreads(threadsNeeded);
+  @Override
+  protected void addStep(TestChainItem step) {
+    verifyValid();
+    currentStep.addItem(step);
   }
   
   /**
@@ -88,6 +89,11 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
     }
   }
   
+  private void incrementThreads(int value) {
+    threadsNeeded += value;
+    maybeUpdatedMaximumThreads(threadsNeeded);
+  }
+  
   /**
    * Adds a set of sequential steps which will be executed concurrently with other steps added to 
    * this builder.  The set of sequential steps added will be run in the same way the execution 
@@ -100,7 +106,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
   @Override
   public void addSteps(SequentialScriptBuilder sequentialSteps) {
     verifyValid();
-    incrementThreads(1);
+    incrementThreads(sequentialSteps.getMaximumThreadsNeeded());
     currentStep.addItem(new SequentialTestWrapper(sequentialSteps));
   }
   
@@ -114,7 +120,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
   @Override
   public void addSteps(ParallelScriptBuilder parallelSteps) {
     verifyValid();
-    incrementThreads(parallelSteps.currentStep.steps.size());
+    incrementThreads(parallelSteps.getMaximumThreadsNeeded());
     Iterator<TestChainItem> it = parallelSteps.currentStep.steps.iterator();
     while (it.hasNext()) {
       currentStep.addItem(it.next());
@@ -133,7 +139,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
     }
     
     @Override
-    public void runChainItem(Executor executor) {
+    public void runChainItem(AbstractScriptBuilder sourceBuilder, Executor executor) {
       executor.execute(testStepRunner);
     }
   }
@@ -155,11 +161,11 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
     }
     
     @Override
-    public void runChainItem(final Executor executor) {
+    public void runChainItem(final AbstractScriptBuilder sourceBuilder, final Executor executor) {
       executor.execute(new Runnable() {
         @Override
         public void run() {
-          sequentialStep.runSteps(executor);
+          sequentialStep.runChainItem(sourceBuilder, executor);
         }
       });
       // no need to block this thread for these to run
@@ -179,10 +185,10 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
   // TODO - can this be put into StepCollectionRunner
   protected static class ParallelStep extends StepCollectionRunner {
     @Override
-    public void runSteps(Executor executor) {
+    public void runChainItem(AbstractScriptBuilder sourceBuilder, Executor executor) {
       Iterator<TestChainItem> it = steps.iterator();
       while (it.hasNext()) {
-        it.next().runChainItem(executor);
+        it.next().runChainItem(sourceBuilder, executor);
       }
     }
   }
