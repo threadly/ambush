@@ -242,17 +242,6 @@ public abstract class AbstractScriptBuilder {
    * @author jent - Mike Jensen
    */
   private static class ProgressTestStep implements TestChainItem {
-    private static final Collection<? extends SettableListenableFuture<TestResult>> FUTURE;
-    
-    static {
-      List<SettableListenableFuture<TestResult>> futures;
-      futures = new ArrayList<SettableListenableFuture<TestResult>>(1);
-      SettableListenableFuture<TestResult> slf = new SettableListenableFuture<TestResult>();
-      slf.setResult(new TestResult(ProgressTestStep.class.getName(), 0));
-      
-      FUTURE = Collections.unmodifiableList(futures);
-    }
-    
     private final SettableListenableFuture<Double> slf;
 
     public ProgressTestStep(SettableListenableFuture<Double> slf) {
@@ -275,7 +264,7 @@ public abstract class AbstractScriptBuilder {
 
     @Override
     public Collection<? extends SettableListenableFuture<TestResult>> getFutures() {
-      return FUTURE;
+      return Collections.emptyList();
     }
   }
   
@@ -340,9 +329,8 @@ public abstract class AbstractScriptBuilder {
 
     @Override
     public Collection<SettableListenableFuture<TestResult>> getFutures() {
-      List<SettableListenableFuture<TestResult>> result = new ArrayList<SettableListenableFuture<TestResult>>(1);
-      result.add(testStepRunner);
-      return result;
+      SettableListenableFuture<TestResult> slf = testStepRunner;
+      return Collections.singletonList(slf);
     }
   }
   
@@ -358,6 +346,7 @@ public abstract class AbstractScriptBuilder {
     private final TestStepInterface testStep;
     
     protected TestStepRunner(TestStepInterface testStep) {
+      super(false);
       this.testStep = testStep;
     }
     
@@ -375,11 +364,7 @@ public abstract class AbstractScriptBuilder {
         long endNanos = Clock.systemNanoTime();
         result = new TestResult(testStep.getIdentifier(), endNanos - startNanos, t);
       }
-      try {
-        setResult(result);
-      } catch (IllegalStateException e) {
-        // it's possible the future is canceled due to failure at the same time it's completing
-      }
+      setResult(result);
     }
   }
 }
