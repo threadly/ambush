@@ -1,5 +1,7 @@
 package org.threadly.load;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * <p>Class which represents the result of an executed test step.  This provides if the test 
  * completed in error (via {@link #getError()} being not {@code null}).  As well as the runtime it 
@@ -34,10 +36,11 @@ public class TestResult {
   /**
    * Check how long the test executed for until it completed normally, or in an error state.
    * 
+   * @param desiredUnit TimeUnit which result should be provided in
    * @return nanosecond test executed for
    */
-  public long runTimeInNanos() {
-    return runTimeInNanos;
+  public long getRunTime(TimeUnit desiredUnit) {
+    return desiredUnit.convert(runTimeInNanos, TimeUnit.NANOSECONDS);
   }
   
   /**

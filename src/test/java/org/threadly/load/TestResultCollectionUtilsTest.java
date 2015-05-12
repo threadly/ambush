@@ -82,7 +82,23 @@ public class TestResultCollectionUtilsTest {
   }
   
   @Test
-  public void getAverageRuntimeNanosTest() throws InterruptedException {
+    public void getAverageRuntimeNanosTest() throws InterruptedException {
     assertEquals(PROCESSING_TIME_NANOS, TestResultCollectionUtils.getAverageRuntimeNanos(futures), 0);
+  }
+  
+  @Test
+  public void getLongestRuntimeStepPassStepTest() throws InterruptedException {
+    TestResult longResult = new TestResult("foo", PROCESSING_TIME_NANOS + 1);
+    futures.add(FutureUtils.immediateResultFuture(longResult));
+    
+    assertTrue(longResult == TestResultCollectionUtils.getLongestRuntimeStep(futures));
+  }
+  
+  @Test
+  public void getLongestRuntimeStepFailStepTest() throws InterruptedException {
+    TestResult longResult = new TestResult("foo", PROCESSING_TIME_NANOS + 1, new Exception());
+    futures.add(FutureUtils.immediateResultFuture(longResult));
+    
+    assertTrue(longResult == TestResultCollectionUtils.getLongestRuntimeStep(futures));
   }
 }

@@ -20,7 +20,7 @@ import org.threadly.concurrent.future.SettableListenableFuture;
 public class ExecutionScript {
   private final int maximumThreadsNeeded;
   private final Collection<TestChainItem> steps;
-  private final AtomicReference<List<? extends ListenableFuture<TestResult>>> runningFutureSet;
+  private final AtomicReference<List<ListenableFuture<TestResult>>> runningFutureSet;
   
   /**
    * Constructs a new {@link ExecutionScript}.  If the minimum threads needed don't match the 
@@ -34,7 +34,7 @@ public class ExecutionScript {
   public ExecutionScript(int maximumThreadsNeeded, Collection<TestChainItem> steps) {
     this.maximumThreadsNeeded = maximumThreadsNeeded;
     this.steps = steps;
-    runningFutureSet = new AtomicReference<List<? extends ListenableFuture<TestResult>>>(null);
+    runningFutureSet = new AtomicReference<List<ListenableFuture<TestResult>>>(null);
   }
   
   /**
@@ -43,7 +43,7 @@ public class ExecutionScript {
    * 
    * @return List of futures that will complete for the current execution
    */
-  public List<? extends ListenableFuture<TestResult>> getRunningFutureSet() {
+  public List<ListenableFuture<TestResult>> getRunningFutureSet() {
     return runningFutureSet.get();
   }
   
@@ -64,8 +64,8 @@ public class ExecutionScript {
    * 
    * @return A collection of futures which will represent each execution step
    */
-  public List<? extends ListenableFuture<TestResult>> startScript() {
-    final List<SettableListenableFuture<TestResult>> result = new ArrayList<SettableListenableFuture<TestResult>>();
+  public List<ListenableFuture<TestResult>> startScript() {
+    final List<ListenableFuture<TestResult>> result = new ArrayList<ListenableFuture<TestResult>>();
     if (! runningFutureSet.compareAndSet(null, result)) {
       throw new IllegalStateException("Script already running in parallel");
     }

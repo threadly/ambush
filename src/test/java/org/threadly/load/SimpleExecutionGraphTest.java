@@ -40,12 +40,12 @@ public class SimpleExecutionGraphTest {
     TestResult tr1 = futures.get(0).get();
     assertNull(tr1.getError());
     assertEquals(identifier1, tr1.getDescription());
-    assertTrue(tr1.runTimeInNanos() >= TimeUnit.MILLISECONDS.toNanos(runTime));
+    assertTrue(tr1.getRunTime(TimeUnit.MILLISECONDS) >= runTime);
     
     TestResult tr2 = futures.get(0).get();
     assertNull(tr2.getError());
     assertEquals(identifier1, tr2.getDescription());
-    assertTrue(tr2.runTimeInNanos() >= TimeUnit.MILLISECONDS.toNanos(runTime));
+    assertTrue(tr1.getRunTime(TimeUnit.MILLISECONDS) >= runTime);
   }
   
   @Test
@@ -69,7 +69,7 @@ public class SimpleExecutionGraphTest {
       } else if (i == steps1.size()) {
         TestResult tr = futures.get(i).get();
         assertNotNull(tr.getError());
-        assertTrue(tr.runTimeInNanos() >= TimeUnit.MILLISECONDS.toNanos(failreRunTime));
+        assertTrue(tr.getRunTime(TimeUnit.MILLISECONDS) >= failreRunTime);
       } else {
         try {
           futures.get(i).get();
@@ -97,7 +97,7 @@ public class SimpleExecutionGraphTest {
     
     assertNull(tr.getError());
     assertEquals(identifier, tr.getDescription());
-    assertTrue(tr.runTimeInNanos() >= TimeUnit.MILLISECONDS.toNanos(runTime));
+    assertTrue(tr.getRunTime(TimeUnit.MILLISECONDS) >= runTime);
   }
   
   private static List<TestStep> makeTestSteps(final Runnable startRunnable, int count) {
