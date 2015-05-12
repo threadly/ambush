@@ -7,12 +7,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
-import org.threadly.concurrent.PriorityScheduler;
-import org.threadly.concurrent.future.FutureUtils;
 import org.threadly.concurrent.future.ListenableFuture;
 import org.threadly.concurrent.future.SettableListenableFuture;
+import org.threadly.load.ExecutionScript.TestChainItem;
 import org.threadly.util.Clock;
 
 /**
@@ -24,7 +22,6 @@ import org.threadly.util.Clock;
 public abstract class AbstractScriptBuilder {
   protected final Collection<TestChainItem> stepRunners;
   private final AtomicBoolean finalized;
-  private final AtomicReference<List<? extends ListenableFuture<TestResult>>> runningFutureSet;
   private int maximumThreadsNeeded;
   private Exception replacementException = null;
 
@@ -38,7 +35,6 @@ public abstract class AbstractScriptBuilder {
       this.maximumThreadsNeeded = sourceBuilder.maximumThreadsNeeded;
     }
     this.finalized = new AtomicBoolean(false);
-    runningFutureSet = new AtomicReference<List<? extends ListenableFuture<TestResult>>>(null);
   }
   
   /**
@@ -58,16 +54,6 @@ public abstract class AbstractScriptBuilder {
     SettableListenableFuture<Double> slf = new SettableListenableFuture<Double>();
     addStep(new ProgressTestStep(slf));
     return slf;
-  }
-  
-  /**
-   * Returns the list of futures for the current test script run.  If not currently running this 
-   * will be null.
-   * 
-   * @return List of futures that will complete for the current execution
-   */
-  protected List<? extends ListenableFuture<TestResult>> getRunningFutureSet() {
-    return runningFutureSet.get();
   }
 
   /**
@@ -168,72 +154,13 @@ public abstract class AbstractScriptBuilder {
   }
   
   /**
-   * Starts the execution of the script.  It will traverse through the execution graph an execute 
-   * things as previously defined by using the builder.  
+   * Finalizes the script and compiles into an executable form.
    * 
-   * This returns a collection of futures.  If an execution step was executed, the future will 
-   * return a {@link TestResult}.  That {@link TestResult} will indicate either a successful or 
-   * failure in execution.  If a failure does occur then future test steps will NOT be executed.  
-   * If a step was never executed due to a failure, those futures will be resolved in an error 
-   * (thus calls to {@link ListenableFuture#get()} will throw a 
-   * {@link java.util.concurrent.ExecutionException}).  You can use 
-   * {@link TestResultCollectionUtils#getFailedResult(Collection)} to see if any steps failed.  
-   * This will block till all steps have completed (or a failed test step occurred).  If 
-   * {@link TestResultCollectionUtils#getFailedResult(Collection)} returns null, then the test 
-   * completed without error. 
-   * 
-   * @return A collection of futures which will represent each execution step
+   * @return A script which can be started
    */
-  public List<? extends ListenableFuture<TestResult>> startScript() {
+  public ExecutionScript build() {
     maybeFinalize();
-    
-    final List<SettableListenableFuture<TestResult>> result = new ArrayList<SettableListenableFuture<TestResult>>();
-    if (! runningFutureSet.compareAndSet(null, result)) {
-      throw new IllegalStateException("Script already running in parallel");
-    }
-    final PriorityScheduler scheduler = new PriorityScheduler(maximumThreadsNeeded + 1);
-    scheduler.prestartAllThreads();
-    
-    Iterator<TestChainItem> it = stepRunners.iterator();
-    while (it.hasNext()) {
-      result.addAll(it.next().getFutures());
-    }
-    
-    // TODO - move this to a regular class?
-    scheduler.execute(new Runnable() {
-      @Override
-      public void run() {
-        Iterator<TestChainItem> it = stepRunners.iterator();
-        while (it.hasNext()) {
-          TestChainItem stepRunner = it.next();
-          stepRunner.runChainItem(AbstractScriptBuilder.this, scheduler);
-          // this call will block till the step is done, thus preventing execution of the next step
-          try {
-            if (TestResultCollectionUtils.getFailedResult(stepRunner.getFutures()) != null) {
-              FutureUtils.cancelIncompleteFutures(result, true);
-              return;
-            }
-          } catch (InterruptedException e) {
-            // let thread exit
-            return;
-          }
-        }
-      }
-    });
-    
-    /* with the way FutureUtils works, the ListenableFuture made here wont be able to be 
-     * garbage collected, even though we don't have a reference to it.  Thus ensuring we 
-     * shutdown the scheduler we created here.
-     */
-    FutureUtils.makeCompleteFuture(result).addListener(new Runnable() {
-      @Override
-      public void run() {
-        runningFutureSet.set(null);
-        scheduler.shutdown();
-      }
-    });
-    
-    return result;
+    return new ExecutionScript(maximumThreadsNeeded, stepRunners);
   }
   
   /**
@@ -249,8 +176,8 @@ public abstract class AbstractScriptBuilder {
     }
 
     @Override
-    public void runChainItem(AbstractScriptBuilder runningScriptBuilder, Executor executor) {
-      List<? extends ListenableFuture<?>> scriptFutures = runningScriptBuilder.getRunningFutureSet();
+    public void runChainItem(ExecutionScript script, Executor executor) {
+      List<? extends ListenableFuture<?>> scriptFutures = script.getRunningFutureSet();
       double doneCount = 0;
       Iterator<? extends ListenableFuture<?>> it = scriptFutures.iterator();
       while (it.hasNext()) {
@@ -266,18 +193,6 @@ public abstract class AbstractScriptBuilder {
     public Collection<? extends SettableListenableFuture<TestResult>> getFutures() {
       return Collections.emptyList();
     }
-  }
-  
-  /**
-   * <p>Interface for chain item, all items provided for execution must implement this interface.  
-   * This will require test steps to be wrapped in a class which provides this functionality.</p>
-   * 
-   * @author jent - Mike Jensen
-   */
-  protected interface TestChainItem {
-    public abstract void runChainItem(AbstractScriptBuilder runningScriptBuilder, Executor executor);
-
-    public abstract Collection<? extends SettableListenableFuture<TestResult>> getFutures();
   }
   
   /**
@@ -306,10 +221,10 @@ public abstract class AbstractScriptBuilder {
     }
     
     @Override
-    public void runChainItem(AbstractScriptBuilder runningScriptBuilder, Executor executor) {
+    public void runChainItem(ExecutionScript script, Executor executor) {
       Iterator<TestChainItem> it = steps.iterator();
       while (it.hasNext()) {
-        it.next().runChainItem(runningScriptBuilder, executor);
+        it.next().runChainItem(script, executor);
       }
     }
   }

@@ -18,7 +18,7 @@ public class AbstractScriptBuilderTest {
     builder.addStep(new TestStep());
     builder.addStep(new TestStep());
     
-    builder.startScript();
+    builder.build().startScript();
     
     final AsyncVerifier av = new AsyncVerifier();
     future.addCallback(new FutureCallback<Double>() {

@@ -4,6 +4,7 @@ import java.util.Iterator;
 import java.util.concurrent.Executor;
 
 import org.threadly.concurrent.future.FutureUtils;
+import org.threadly.load.ExecutionScript.TestChainItem;
 
 /**
  * <p>A builder which's added steps will all be executed in sequence.</p>
@@ -111,7 +112,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
     }
     
     @Override
-    public void runChainItem(AbstractScriptBuilder runningScriptBuilder, Executor executor) {
+    public void runChainItem(ExecutionScript runningScriptBuilder, Executor executor) {
       testStepRunner.run();
     }
   }
@@ -124,7 +125,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
   // TODO - can this be put into StepCollectionRunner
   protected static class SequentialStep extends StepCollectionRunner {
     @Override
-    public void runChainItem(AbstractScriptBuilder runningScriptBuilder, final Executor executor) {
+    public void runChainItem(ExecutionScript runningScriptBuilder, final Executor executor) {
       Iterator<TestChainItem> it = steps.iterator();
       while (it.hasNext()) {
         TestChainItem chainItem = it.next();

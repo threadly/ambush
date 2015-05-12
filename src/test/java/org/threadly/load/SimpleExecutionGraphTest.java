@@ -34,7 +34,7 @@ public class SimpleExecutionGraphTest {
     builder.addStep(step1);
     builder.addStep(step2);
     
-    List<? extends ListenableFuture<TestResult>> futures = builder.startScript();
+    List<? extends ListenableFuture<TestResult>> futures = builder.build().startScript();
     assertEquals(2, futures.size());
     
     TestResult tr1 = futures.get(0).get();
@@ -60,7 +60,7 @@ public class SimpleExecutionGraphTest {
     List<TestStep> steps2 = makeTestSteps(null, TEST_COMPLEXITY);
     addSteps(steps2, builder);
     
-    List<? extends ListenableFuture<TestResult>> futures = builder.startScript();
+    List<? extends ListenableFuture<TestResult>> futures = builder.build().startScript();
     assertEquals(TEST_COMPLEXITY * 2 + 1, futures.size());
     
     for (int i = 0; i < futures.size(); i++) {
@@ -90,7 +90,7 @@ public class SimpleExecutionGraphTest {
     ParallelScriptBuilder builder = new ParallelScriptBuilder();
     builder.addStep(step, runCount);
     
-    List<? extends ListenableFuture<TestResult>> futures = builder.startScript();
+    List<? extends ListenableFuture<TestResult>> futures = builder.build().startScript();
     assertEquals(runCount, futures.size());
     
     TestResult tr = futures.get(0).get();
@@ -140,7 +140,7 @@ public class SimpleExecutionGraphTest {
     }, TEST_COMPLEXITY);
     addSteps(parallelSteps2, builder);
     
-    List<? extends ListenableFuture<TestResult>> futures = builder.startScript();
+    List<? extends ListenableFuture<TestResult>> futures = builder.build().startScript();
     assertEquals(TEST_COMPLEXITY * 2, futures.size());
     
     FutureUtils.blockTillAllComplete(futures);
@@ -167,7 +167,7 @@ public class SimpleExecutionGraphTest {
     }, TEST_COMPLEXITY);
     addSteps(parallelSteps2, builder);
     
-    List<? extends ListenableFuture<TestResult>> futures = builder.startScript();
+    List<? extends ListenableFuture<TestResult>> futures = builder.build().startScript();
     assertEquals(TEST_COMPLEXITY * 2 + 1, futures.size());
     
     for (int i = 0; i < futures.size(); i++) {
