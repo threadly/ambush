@@ -29,11 +29,11 @@ public class ScriptRunner {
     long end = Clock.accurateForwardProgressingMillis();
     if (fails.isEmpty()) {
       System.out.println("All tests passed after running for " + ((end - start) / 1000) + " seconds");
-      System.out.println("Average time spent per test step: " + 
-                           TestResultCollectionUtils.getAverageRuntimeNanos(futures));
+      double averageRunMillis = TestResultCollectionUtils.getAverageRuntime(futures, TimeUnit.MILLISECONDS);
+      System.out.println("Average time spent per test step: " + averageRunMillis + " milliseconds");
       TestResult longestStep = TestResultCollectionUtils.getLongestRuntimeStep(futures);
       System.out.println("Longest running step: " + longestStep.getDescription() + 
-                           ", ran for: " + longestStep.getRunTime(TimeUnit.MILLISECONDS) + "millis");
+                           ", ran for: " + longestStep.getRunTime(TimeUnit.MILLISECONDS) + " milliseconds");
     } else {
       System.out.println(fails.size() + " TEST FAILED!!");
       Iterator<TestResult> it = fails.iterator();
@@ -50,17 +50,17 @@ public class ScriptRunner {
       System.err.println("No arguments provided, need ScriptFactory class");
       usageAndExit();
     }
+    
     String classStr = args[0];
     ScriptFactory factory = null;
     try {
       Class<?> factoryClass = Class.forName(classStr);
-      if (! factoryClass.isAssignableFrom(ScriptFactory.class)) {
+      try {
+        factory = (ScriptFactory)factoryClass.newInstance();
+      } catch (ClassCastException e) {
         System.err.println("Class does not seem to be an instance of " + 
                              ScriptFactory.class.getSimpleName() + ": " + classStr);
         usageAndExit();
-      }
-      try {
-        factory = (ScriptFactory)factoryClass.newInstance();
       } catch (InstantiationException e) {
         System.err.println("Failed to call empty cosntructor on: " + classStr);
         e.printStackTrace();
@@ -74,6 +74,7 @@ public class ScriptRunner {
       System.err.println("Could not find class in classpath: " + classStr);
       usageAndExit();
     }
+
     Properties props = new Properties();
     for (int i = 1; i < args.length; i++) {
       int delimIndex = args[i].indexOf('=');
@@ -84,7 +85,9 @@ public class ScriptRunner {
       }
     }
     
-    return factory.buildScript(props);
+    factory.initialize(props);
+    
+    return factory.buildScript();
   }
   
   private static void usageAndExit() {

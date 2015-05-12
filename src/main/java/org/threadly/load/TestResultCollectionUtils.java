@@ -84,10 +84,11 @@ public class TestResultCollectionUtils {
    * completed (or were canceled).
    * 
    * @param futures Future collection to iterate over and inspect
+   * @param timeUnit Time unit that the resulting time should be returned in
    * @return Average nanoseconds spent per test step 
    * @throws InterruptedException Thrown if the thread is interrupted while waiting for {@link TestResult}
    */
-  public static double getAverageRuntimeNanos(Collection<? extends Future<TestResult>> futures) 
+  public static double getAverageRuntime(Collection<? extends Future<TestResult>> futures, TimeUnit timeUnit) 
       throws InterruptedException {
     double count = 0;
     double totalNanos = 0;
@@ -96,7 +97,7 @@ public class TestResultCollectionUtils {
       try {
         TestResult tr = it.next().get();
         count++;
-        totalNanos += tr.getRunTime(TimeUnit.NANOSECONDS);
+        totalNanos += tr.getRunTime(timeUnit);
       } catch (CancellationException e) {
         // possible if canceled after a failure event
       } catch (ExecutionException e) {

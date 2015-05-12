@@ -5,6 +5,7 @@ import static org.junit.Assert.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.After;
 import org.junit.Before;
@@ -82,8 +83,9 @@ public class TestResultCollectionUtilsTest {
   }
   
   @Test
-    public void getAverageRuntimeNanosTest() throws InterruptedException {
-    assertEquals(PROCESSING_TIME_NANOS, TestResultCollectionUtils.getAverageRuntimeNanos(futures), 0);
+    public void getAverageRuntimeTest() throws InterruptedException {
+    assertEquals(PROCESSING_TIME_NANOS, 
+                 TestResultCollectionUtils.getAverageRuntime(futures, TimeUnit.NANOSECONDS), 0);
   }
   
   @Test
