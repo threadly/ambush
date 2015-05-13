@@ -8,16 +8,18 @@ package org.threadly.load;
 public interface ScriptStepInterface {
   /**
    * Get the name or identifier that was provided at construction for this test step.
-   * @return Test step name
+   * 
+   * @return Script step name
    */
   public String getIdentifier();
   
   /**
-   * This must be implemented for the actual execution of the test.  This invocation should block 
-   * until the test has completed.  If the test completed without error just return normally.  If 
-   * the test failed, it is expected this will throw an exception which represents the error.
+   * This must be implemented for the actual execution of the script step.  This invocation should 
+   * block until the step has completed.  If the script completed without error just return 
+   * normally.  If the test failed, it is expected this will throw an exception which represents 
+   * the error.
    * 
    * @throws Exception Thrown if any failure occurred while running the test
    */
-  public void runTest() throws Exception;
+  public void runStep() throws Exception;
 }

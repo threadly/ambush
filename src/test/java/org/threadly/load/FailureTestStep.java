@@ -32,8 +32,8 @@ public class FailureTestStep extends TestStep {
   }
 
   @Override
-  public void runTest() {
-    super.runTest();
+  public void runStep() {
+    super.runStep();
     
     throw failure;
   }

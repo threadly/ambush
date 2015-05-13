@@ -22,7 +22,7 @@ public class TestStep extends AbstractScriptStep {
   }
 
   @Override
-  public void runTest() {
+  public void runStep() {
     testRunnable.run();
   }
   

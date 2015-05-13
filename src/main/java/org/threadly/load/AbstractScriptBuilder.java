@@ -281,7 +281,7 @@ public abstract class AbstractScriptBuilder {
       long startNanos = Clock.systemNanoTime();
       StepResult result;
       try {
-        scriptStep.runTest();
+        scriptStep.runStep();
         long endNanos = Clock.systemNanoTime();
         result = new StepResult(scriptStep.getIdentifier(), endNanos - startNanos);
       } catch (Throwable t) {

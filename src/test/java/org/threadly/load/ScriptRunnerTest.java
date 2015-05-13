@@ -42,7 +42,7 @@ public class ScriptRunnerTest {
         }
 
         @Override
-        public void runTest() throws Exception {
+        public void runStep() throws Exception {
           av.assertEquals(intTestVal, getIntValue(intKey));
         }
       });
@@ -53,7 +53,7 @@ public class ScriptRunnerTest {
         }
 
         @Override
-        public void runTest() throws Exception {
+        public void runStep() throws Exception {
           av.assertEquals(longTestVal, getLongValue(longKey));
         }
       });
@@ -64,7 +64,7 @@ public class ScriptRunnerTest {
         }
 
         @Override
-        public void runTest() throws Exception {
+        public void runStep() throws Exception {
           av.assertEquals(doubleTestVal, getDoubleValue(doubleKey));
         }
       });
@@ -75,7 +75,7 @@ public class ScriptRunnerTest {
         }
 
         @Override
-        public void runTest() throws Exception {
+        public void runStep() throws Exception {
           av.assertEquals(stringTestVal, getStringValue(stringKey));
         }
       });
@@ -86,7 +86,7 @@ public class ScriptRunnerTest {
         }
 
         @Override
-        public void runTest() throws Exception {
+        public void runStep() throws Exception {
           av.signalComplete();
         }
       });
