@@ -37,6 +37,8 @@ public class TestResultCollectionUtils {
         if (tr.getError() != null) {
           return tr;
         }
+      } catch (CancellationException e) {
+        // likely was canceled already from another thread
       } catch (ExecutionException e) {
         // should not be possible
         throw new RuntimeException(e);
