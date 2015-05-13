@@ -5,7 +5,7 @@ package org.threadly.load;
  * 
  * @author jent - Mike Jensen
  */
-public interface TestStepInterface {
+public interface ScriptStepInterface {
   /**
    * Get the name or identifier that was provided at construction for this test step.
    * @return Test step name

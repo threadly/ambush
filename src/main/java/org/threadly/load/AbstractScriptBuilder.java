@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.threadly.concurrent.future.ListenableFuture;
 import org.threadly.concurrent.future.SettableListenableFuture;
-import org.threadly.load.ExecutionScript.TestChainItem;
+import org.threadly.load.ExecutableScript.ExecutionItem;
 import org.threadly.util.Clock;
 
 /**
@@ -20,14 +20,14 @@ import org.threadly.util.Clock;
  * @author jent - Mike Jensen
  */
 public abstract class AbstractScriptBuilder {
-  protected final Collection<TestChainItem> stepRunners;
+  protected final Collection<ExecutionItem> stepRunners;
   private final AtomicBoolean finalized;
   private int maximumThreadsNeeded;
   private Exception replacementException = null;
 
   protected AbstractScriptBuilder(AbstractScriptBuilder sourceBuilder) {
     if (sourceBuilder == null) {
-      stepRunners = new ArrayList<TestChainItem>();
+      stepRunners = new ArrayList<ExecutionItem>();
       maximumThreadsNeeded = 1;
     } else {
       sourceBuilder.replaced();
@@ -52,7 +52,7 @@ public abstract class AbstractScriptBuilder {
    */
   public ListenableFuture<Double> addProgressFuture() {
     SettableListenableFuture<Double> slf = new SettableListenableFuture<Double>();
-    addStep(new ProgressTestStep(slf));
+    addStep(new ProgressScriptStep(slf));
     return slf;
   }
 
@@ -82,20 +82,20 @@ public abstract class AbstractScriptBuilder {
 
   /**
    * Add a step to this builder.  For more specific step addition descriptions please see: 
-   * {@link SequentialScriptBuilder#addStep(TestStepInterface)} and 
-   * {@link ParallelScriptBuilder#addStep(TestStepInterface)}.
+   * {@link SequentialScriptBuilder#addStep(ScriptStepInterface)} and 
+   * {@link ParallelScriptBuilder#addStep(ScriptStepInterface)}.
    * 
    * @param step Test step to add to builder
    */
-  public abstract void addStep(TestStepInterface step);
+  public abstract void addStep(ScriptStepInterface step);
   
   /**
-   * Add a {@link TestChainItem} to this builder.  This is a private API so that we can add test 
+   * Add a {@link ExecutionItem} to this builder.  This is a private API so that we can add test 
    * steps which need access to the executing {@link AbstractScriptBuilder}.
    * 
    * @param chainItem Item to add to current execution chain
    */
-  protected abstract void addStep(TestChainItem chainItem);
+  protected abstract void addStep(ExecutionItem chainItem);
 
   /**
    * Add a sequential series of steps to this builder.  Since the behavior of this depends on the 
@@ -158,9 +158,9 @@ public abstract class AbstractScriptBuilder {
    * 
    * @return A script which can be started
    */
-  public ExecutionScript build() {
+  public ExecutableScript build() {
     maybeFinalize();
-    return new ExecutionScript(maximumThreadsNeeded, stepRunners);
+    return new ExecutableScript(maximumThreadsNeeded, stepRunners);
   }
   
   /**
@@ -168,15 +168,15 @@ public abstract class AbstractScriptBuilder {
    * 
    * @author jent - Mike Jensen
    */
-  private static class ProgressTestStep implements TestChainItem {
+  private static class ProgressScriptStep implements ExecutionItem {
     private final SettableListenableFuture<Double> slf;
 
-    public ProgressTestStep(SettableListenableFuture<Double> slf) {
+    public ProgressScriptStep(SettableListenableFuture<Double> slf) {
       this.slf = slf;
     }
 
     @Override
-    public void runChainItem(ExecutionScript script, Executor executor) {
+    public void runChainItem(ExecutableScript script, Executor executor) {
       List<? extends ListenableFuture<?>> scriptFutures = script.getRunningFutureSet();
       double doneCount = 0;
       Iterator<? extends ListenableFuture<?>> it = scriptFutures.iterator();
@@ -190,8 +190,14 @@ public abstract class AbstractScriptBuilder {
     }
 
     @Override
-    public Collection<? extends SettableListenableFuture<TestResult>> getFutures() {
+    public Collection<? extends SettableListenableFuture<StepResult>> getFutures() {
       return Collections.emptyList();
+    }
+
+    @Override
+    public ExecutionItem makeCopy() {
+      // this does not need a copy
+      return this;
     }
   }
   
@@ -201,28 +207,31 @@ public abstract class AbstractScriptBuilder {
    * 
    * @author jent - Mike Jensen
    */
-  protected abstract static class StepCollectionRunner implements TestChainItem {
-    protected final List<TestChainItem> steps;
-    private final List<SettableListenableFuture<TestResult>> futures;
+  protected abstract static class StepCollectionRunner implements ExecutionItem {
+    protected final List<ExecutionItem> steps;
+    private final List<SettableListenableFuture<StepResult>> futures;
     
     public StepCollectionRunner() {
-      steps = new ArrayList<TestChainItem>();
-      futures = new ArrayList<SettableListenableFuture<TestResult>>();
+      steps = new ArrayList<ExecutionItem>();
+      futures = new ArrayList<SettableListenableFuture<StepResult>>();
     }
     
-    public void addItem(TestChainItem item) {
+    @Override
+    public abstract StepCollectionRunner makeCopy();
+    
+    public void addItem(ExecutionItem item) {
       futures.addAll(item.getFutures());
       steps.add(item);
     }
     
     @Override
-    public Collection<? extends SettableListenableFuture<TestResult>> getFutures() {
+    public Collection<? extends SettableListenableFuture<StepResult>> getFutures() {
       return futures;
     }
     
     @Override
-    public void runChainItem(ExecutionScript script, Executor executor) {
-      Iterator<TestChainItem> it = steps.iterator();
+    public void runChainItem(ExecutableScript script, Executor executor) {
+      Iterator<ExecutionItem> it = steps.iterator();
       while (it.hasNext()) {
         it.next().runChainItem(script, executor);
       }
@@ -235,34 +244,34 @@ public abstract class AbstractScriptBuilder {
    * 
    * @author jent - Mike Jensen
    */
-  protected abstract static class AbstractTestStepWrapper implements TestChainItem {
-    public final TestStepRunner testStepRunner;
+  protected abstract static class AbstractScriptStepWrapper implements ExecutionItem {
+    public final ScriptStepRunner scriptStepRunner;
     
-    public AbstractTestStepWrapper(TestStepInterface testStep) {
-      testStepRunner = new TestStepRunner(testStep);
+    public AbstractScriptStepWrapper(ScriptStepInterface scriptStep) {
+      scriptStepRunner = new ScriptStepRunner(scriptStep);
     }
 
     @Override
-    public Collection<SettableListenableFuture<TestResult>> getFutures() {
-      SettableListenableFuture<TestResult> slf = testStepRunner;
+    public Collection<SettableListenableFuture<StepResult>> getFutures() {
+      SettableListenableFuture<StepResult> slf = scriptStepRunner;
       return Collections.singletonList(slf);
     }
   }
   
   /**
-   * <p>{@link Runnable} implementation for how a {@link TestStepInterface} is executed.  This 
+   * <p>{@link Runnable} implementation for how a {@link ScriptStepInterface} is executed.  This 
    * class also represents the future for the test step execution.  If executed it is guaranteed 
-   * to provide a {@link TestResult} (with or without error).</p>
+   * to provide a {@link StepResult} (with or without error).</p>
    * 
    * @author jent - Mike Jensen
    */
-  protected static class TestStepRunner extends SettableListenableFuture<TestResult>
+  protected static class ScriptStepRunner extends SettableListenableFuture<StepResult>
                                         implements Runnable {
-    private final TestStepInterface testStep;
+    protected final ScriptStepInterface scriptStep;
     
-    protected TestStepRunner(TestStepInterface testStep) {
+    protected ScriptStepRunner(ScriptStepInterface scriptStep) {
       super(false);
-      this.testStep = testStep;
+      this.scriptStep = scriptStep;
     }
     
     @Override
@@ -270,14 +279,14 @@ public abstract class AbstractScriptBuilder {
       setRunningThread(Thread.currentThread());
       
       long startNanos = Clock.systemNanoTime();
-      TestResult result;
+      StepResult result;
       try {
-        testStep.runTest();
+        scriptStep.runTest();
         long endNanos = Clock.systemNanoTime();
-        result = new TestResult(testStep.getIdentifier(), endNanos - startNanos);
+        result = new StepResult(scriptStep.getIdentifier(), endNanos - startNanos);
       } catch (Throwable t) {
         long endNanos = Clock.systemNanoTime();
-        result = new TestResult(testStep.getIdentifier(), endNanos - startNanos, t);
+        result = new StepResult(scriptStep.getIdentifier(), endNanos - startNanos, t);
       }
       setResult(result);
     }

@@ -7,7 +7,7 @@ import java.util.Properties;
 import org.threadly.util.ArgumentVerifier;
 
 /**
- * <p>Interface for a class which builds an {@link ExecutionScript}, and provides the built 
+ * <p>Interface for a class which builds an {@link ExecutableScript}, and provides the built 
  * result, ready to run.</p>
  * 
  * <p>Any implementing class must provide a default (empty) constructor.  Properties will be 
@@ -210,7 +210,7 @@ public abstract class ScriptFactory {
    * 
    * @return A constructed script, ready to be ran
    */
-  public abstract ExecutionScript buildScript();
+  public abstract ExecutableScript buildScript();
   
   /**
    * <p>Exception type that indicates an error with one of the parameters.  This most commonly 

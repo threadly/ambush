@@ -4,7 +4,7 @@ import org.threadly.test.concurrent.TestRunnable;
 import org.threadly.util.StringUtils;
 
 @SuppressWarnings("javadoc")
-public class TestStep extends AbstractTestStep {
+public class TestStep extends AbstractScriptStep {
   private final TestRunnable testRunnable;
 
   public TestStep() {

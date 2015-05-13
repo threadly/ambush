@@ -4,7 +4,7 @@ import java.util.Iterator;
 import java.util.concurrent.Executor;
 
 import org.threadly.concurrent.future.FutureUtils;
-import org.threadly.load.ExecutionScript.TestChainItem;
+import org.threadly.load.ExecutableScript.ExecutionItem;
 
 /**
  * <p>A builder which's added steps will all be executed in sequence.</p>
@@ -58,12 +58,12 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
    * @param step Test step to be added
    */
   @Override
-  public void addStep(TestStepInterface step) {
-    addStep(new TestStepWrapper(step));
+  public void addStep(ScriptStepInterface step) {
+    addStep(new ScriptStepWrapper(step));
   }
   
   @Override
-  protected void addStep(TestChainItem step) {
+  protected void addStep(ExecutionItem step) {
     verifyValid();
     currentStep.addItem(step);
   }
@@ -79,7 +79,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
   public void addSteps(SequentialScriptBuilder sequentialSteps) {
     verifyValid();
     maybeUpdatedMaximumThreads(sequentialSteps.getMaximumThreadsNeeded() + 1);
-    Iterator<TestChainItem> it = sequentialSteps.currentStep.steps.iterator();
+    Iterator<ExecutionItem> it = sequentialSteps.currentStep.steps.iterator();
     while (it.hasNext()) {
       currentStep.addItem(it.next());
     }
@@ -106,14 +106,19 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
    * 
    * @author jent - Mike Jensen
    */
-  private static class TestStepWrapper extends AbstractTestStepWrapper {
-    public TestStepWrapper(TestStepInterface testStep) {
-      super(testStep);
+  private static class ScriptStepWrapper extends AbstractScriptStepWrapper {
+    public ScriptStepWrapper(ScriptStepInterface scriptStep) {
+      super(scriptStep);
     }
     
     @Override
-    public void runChainItem(ExecutionScript runningScriptBuilder, Executor executor) {
-      testStepRunner.run();
+    public void runChainItem(ExecutableScript runningScriptBuilder, Executor executor) {
+      scriptStepRunner.run();
+    }
+
+    @Override
+    public ExecutionItem makeCopy() {
+      return new ScriptStepWrapper(scriptStepRunner.scriptStep);
     }
   }
   
@@ -125,14 +130,14 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
   // TODO - can this be put into StepCollectionRunner
   protected static class SequentialStep extends StepCollectionRunner {
     @Override
-    public void runChainItem(ExecutionScript runningScriptBuilder, final Executor executor) {
-      Iterator<TestChainItem> it = steps.iterator();
+    public void runChainItem(ExecutableScript runningScriptBuilder, final Executor executor) {
+      Iterator<ExecutionItem> it = steps.iterator();
       while (it.hasNext()) {
-        TestChainItem chainItem = it.next();
+        ExecutionItem chainItem = it.next();
         chainItem.runChainItem(runningScriptBuilder, executor);
         // this call will block till execution is done, thus making us wait to run the next chain item
         try {
-          if (TestResultCollectionUtils.getFailedResult(chainItem.getFutures()) != null) {
+          if (StepResultCollectionUtils.getFailedResult(chainItem.getFutures()) != null) {
             FutureUtils.cancelIncompleteFutures(getFutures(), true);
             return;
           }
@@ -141,6 +146,16 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
           return;
         }
       }
+    }
+
+    @Override
+    public SequentialStep makeCopy() {
+      SequentialStep result = new SequentialStep();
+      Iterator<ExecutionItem> it = steps.iterator();
+      while (it.hasNext()) {
+        result.addItem(it.next().makeCopy());
+      }
+      return result;
     }
   }
 }

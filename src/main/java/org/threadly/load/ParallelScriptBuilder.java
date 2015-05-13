@@ -5,7 +5,7 @@ import java.util.Iterator;
 import java.util.concurrent.Executor;
 
 import org.threadly.concurrent.future.SettableListenableFuture;
-import org.threadly.load.ExecutionScript.TestChainItem;
+import org.threadly.load.ExecutableScript.ExecutionItem;
 import org.threadly.load.SequentialScriptBuilder.SequentialStep;
 
 /**
@@ -65,12 +65,12 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
    * @param step Test step to be added
    */
   @Override
-  public void addStep(TestStepInterface step) {
+  public void addStep(ScriptStepInterface step) {
     addStep(step, 1);
   }
   
   @Override
-  protected void addStep(TestChainItem step) {
+  protected void addStep(ExecutionItem step) {
     verifyValid();
     currentStep.addItem(step);
   }
@@ -82,11 +82,11 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
    * @param step Test step to be added
    * @param times Quantity of times this step should be ran concurrently
    */
-  public void addStep(TestStepInterface step, int times) {
+  public void addStep(ScriptStepInterface step, int times) {
     verifyValid();
     incrementThreads(times);
     for (int i = 0; i < times; i++) {
-      currentStep.addItem(new TestStepWrapper(step));
+      currentStep.addItem(new ScriptStepWrapper(step));
     }
   }
   
@@ -122,7 +122,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
   public void addSteps(ParallelScriptBuilder parallelSteps) {
     verifyValid();
     incrementThreads(parallelSteps.getMaximumThreadsNeeded());
-    Iterator<TestChainItem> it = parallelSteps.currentStep.steps.iterator();
+    Iterator<ExecutionItem> it = parallelSteps.currentStep.steps.iterator();
     while (it.hasNext()) {
       currentStep.addItem(it.next());
     }
@@ -134,26 +134,31 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
    * 
    * @author jent - Mike Jensen
    */
-  private static class TestStepWrapper extends AbstractTestStepWrapper {
-    public TestStepWrapper(TestStepInterface testStep) {
-      super(testStep);
+  private static class ScriptStepWrapper extends AbstractScriptStepWrapper {
+    public ScriptStepWrapper(ScriptStepInterface scriptStep) {
+      super(scriptStep);
     }
     
     @Override
-    public void runChainItem(ExecutionScript sourceBuilder, Executor executor) {
-      executor.execute(testStepRunner);
+    public void runChainItem(ExecutableScript sourceBuilder, Executor executor) {
+      executor.execute(scriptStepRunner);
+    }
+
+    @Override
+    public ExecutionItem makeCopy() {
+      return new ScriptStepWrapper(scriptStepRunner.scriptStep);
     }
   }
   
   /**
-   * <p>Implementation of {@link TestChainItem} where multiple test steps will be executed in 
+   * <p>Implementation of {@link ExecutionItem} where multiple test steps will be executed in 
    * sequence, while other steps in this build can run concurrently at the same time.</p>
    * 
    * @author jent - Mike Jensen
    */
-  private static class SequentialTestWrapper implements TestChainItem {
+  private static class SequentialTestWrapper implements ExecutionItem {
     private final SequentialStep sequentialStep;
-    private final Collection<? extends SettableListenableFuture<TestResult>> futures; 
+    private final Collection<? extends SettableListenableFuture<StepResult>> futures;
     
     public SequentialTestWrapper(SequentialScriptBuilder sequentialScript) {
       sequentialScript.verifyValid();
@@ -161,8 +166,13 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
       futures = sequentialStep.getFutures();
     }
     
+    private SequentialTestWrapper(SequentialStep sequentialStep) {
+      this.sequentialStep = sequentialStep;
+      futures = sequentialStep.getFutures();
+    }
+    
     @Override
-    public void runChainItem(final ExecutionScript sourceBuilder, final Executor executor) {
+    public void runChainItem(final ExecutableScript sourceBuilder, final Executor executor) {
       executor.execute(new Runnable() {
         @Override
         public void run() {
@@ -173,8 +183,13 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
     }
 
     @Override
-    public Collection<? extends SettableListenableFuture<TestResult>> getFutures() {
+    public Collection<? extends SettableListenableFuture<StepResult>> getFutures() {
       return futures;
+    }
+
+    @Override
+    public ExecutionItem makeCopy() {
+      return new SequentialTestWrapper(sequentialStep.makeCopy());
     }
   }
   
@@ -186,11 +201,21 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
   // TODO - can this be put into StepCollectionRunner
   protected static class ParallelStep extends StepCollectionRunner {
     @Override
-    public void runChainItem(ExecutionScript sourceBuilder, Executor executor) {
-      Iterator<TestChainItem> it = steps.iterator();
+    public void runChainItem(ExecutableScript sourceBuilder, Executor executor) {
+      Iterator<ExecutionItem> it = steps.iterator();
       while (it.hasNext()) {
         it.next().runChainItem(sourceBuilder, executor);
       }
+    }
+
+    @Override
+    public ParallelStep makeCopy() {
+      ParallelStep result = new ParallelStep();
+      Iterator<ExecutionItem> it = steps.iterator();
+      while (it.hasNext()) {
+        result.addItem(it.next().makeCopy());
+      }
+      return result;
     }
   }
 }

@@ -51,7 +51,7 @@ public class SequentialScriptBuilderTest {
       }
     });
     
-    assertNull(TestResultCollectionUtils.getFailedResult(sBuilder.build().startScript()));
+    assertNull(StepResultCollectionUtils.getFailedResult(sBuilder.build().startScript()));
   }
   
   @Test
@@ -80,8 +80,8 @@ public class SequentialScriptBuilderTest {
     firstHalfFutures.set(new ArrayList<ListenableFuture<?>>(sBuilder.currentStep.getFutures()));
     sBuilder.addSteps(secondBuilder);
     
-    Collection<? extends ListenableFuture<TestResult>> allFutures = sBuilder.build().startScript();
+    Collection<? extends ListenableFuture<StepResult>> allFutures = sBuilder.build().startScript();
     assertEquals(stepCountPerBuilder * 2, allFutures.size());
-    assertNull(TestResultCollectionUtils.getFailedResult(allFutures));
+    assertNull(StepResultCollectionUtils.getFailedResult(allFutures));
   }
 }

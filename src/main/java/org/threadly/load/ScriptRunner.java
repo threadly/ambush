@@ -25,30 +25,30 @@ public class ScriptRunner {
    * @throws InterruptedException Thrown if this thread is interrupted while waiting on test to run
    */
   public static void main(String[] args) throws InterruptedException {
-    ExecutionScript script = parseArgsAndGetScript(args);
+    ExecutableScript script = parseArgsAndGetScript(args);
     long start = Clock.accurateForwardProgressingMillis();
-    List<ListenableFuture<TestResult>> futures = script.startScript();
-    List<TestResult> fails = TestResultCollectionUtils.getAllFailedResults(futures);
+    List<ListenableFuture<StepResult>> futures = script.startScript();
+    List<StepResult> fails = StepResultCollectionUtils.getAllFailedResults(futures);
     long end = Clock.accurateForwardProgressingMillis();
     if (fails.isEmpty()) {
       System.out.println("All tests passed after running for " + ((end - start) / 1000) + " seconds");
-      double averageRunMillis = TestResultCollectionUtils.getAverageRuntime(futures, TimeUnit.MILLISECONDS);
+      double averageRunMillis = StepResultCollectionUtils.getAverageRuntime(futures, TimeUnit.MILLISECONDS);
       System.out.println("Average time spent per test step: " + averageRunMillis + " milliseconds");
-      TestResult longestStep = TestResultCollectionUtils.getLongestRuntimeStep(futures);
+      StepResult longestStep = StepResultCollectionUtils.getLongestRuntimeStep(futures);
       System.out.println("Longest running step: " + longestStep.getDescription() + 
                            ", ran for: " + longestStep.getRunTime(TimeUnit.MILLISECONDS) + " milliseconds");
     } else {
       System.out.println(fails.size() + " TEST FAILED!!");
-      Iterator<TestResult> it = fails.iterator();
+      Iterator<StepResult> it = fails.iterator();
       while (it.hasNext()) {
-        TestResult tr = it.next();
+        StepResult tr = it.next();
         System.out.println("Test " + tr.getDescription() + " failed for cause:");
         tr.getError().printStackTrace();
       }
     }
   }
   
-  private static ExecutionScript parseArgsAndGetScript(String[] args) {
+  private static ExecutableScript parseArgsAndGetScript(String[] args) {
     if (args.length == 0) {
       System.err.println("No arguments provided, need ScriptFactory class");
       usageAndExit(null);

@@ -32,10 +32,10 @@ public class ScriptRunnerTest {
   
   public static class SimpleScriptFactory extends ScriptFactory {
     @Override
-    public ExecutionScript buildScript() {
+    public ExecutableScript buildScript() {
       SequentialScriptBuilder scriptBuilder = new SequentialScriptBuilder();
       
-      scriptBuilder.addStep(new TestStepInterface() {
+      scriptBuilder.addStep(new ScriptStepInterface() {
         @Override
         public String getIdentifier() {
           return "int verifier";
@@ -46,7 +46,7 @@ public class ScriptRunnerTest {
           av.assertEquals(intTestVal, getIntValue(intKey));
         }
       });
-      scriptBuilder.addStep(new TestStepInterface() {
+      scriptBuilder.addStep(new ScriptStepInterface() {
         @Override
         public String getIdentifier() {
           return "long verifier";
@@ -57,7 +57,7 @@ public class ScriptRunnerTest {
           av.assertEquals(longTestVal, getLongValue(longKey));
         }
       });
-      scriptBuilder.addStep(new TestStepInterface() {
+      scriptBuilder.addStep(new ScriptStepInterface() {
         @Override
         public String getIdentifier() {
           return "double verifier";
@@ -68,7 +68,7 @@ public class ScriptRunnerTest {
           av.assertEquals(doubleTestVal, getDoubleValue(doubleKey));
         }
       });
-      scriptBuilder.addStep(new TestStepInterface() {
+      scriptBuilder.addStep(new ScriptStepInterface() {
         @Override
         public String getIdentifier() {
           return "string verifier";
@@ -79,7 +79,7 @@ public class ScriptRunnerTest {
           av.assertEquals(stringTestVal, getStringValue(stringKey));
         }
       });
-      scriptBuilder.addStep(new TestStepInterface() {
+      scriptBuilder.addStep(new ScriptStepInterface() {
         @Override
         public String getIdentifier() {
           return "end step";
