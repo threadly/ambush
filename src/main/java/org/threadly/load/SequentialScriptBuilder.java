@@ -78,7 +78,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
   @Override
   public void addSteps(SequentialScriptBuilder sequentialSteps) {
     verifyValid();
-    maybeUpdatedMaximumThreads(sequentialSteps.getMaximumThreadsNeeded() + 1);
+    maybeUpdatedMaximumThreads(sequentialSteps.getNeededThreadCount() + 1);
     Iterator<ExecutionItem> it = sequentialSteps.currentStep.steps.iterator();
     while (it.hasNext()) {
       currentStep.addItem(it.next());
@@ -95,7 +95,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
    */
   @Override
   public void addSteps(ParallelScriptBuilder parallelSteps) {
-    maybeUpdatedMaximumThreads(parallelSteps.getMaximumThreadsNeeded() + 1);
+    maybeUpdatedMaximumThreads(parallelSteps.getNeededThreadCount() + 1);
     addStep(parallelSteps.currentStep);
   }
   

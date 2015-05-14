@@ -22,17 +22,17 @@ import org.threadly.util.Clock;
 public abstract class AbstractScriptBuilder {
   protected final Collection<ExecutionItem> stepRunners;
   private final AtomicBoolean finalized;
-  private int maximumThreadsNeeded;
+  private int neededThreadCount;
   private Exception replacementException = null;
 
   protected AbstractScriptBuilder(AbstractScriptBuilder sourceBuilder) {
     if (sourceBuilder == null) {
       stepRunners = new ArrayList<ExecutionItem>();
-      maximumThreadsNeeded = 1;
+      neededThreadCount = 1;
     } else {
       sourceBuilder.replaced();
       this.stepRunners = sourceBuilder.stepRunners;
-      this.maximumThreadsNeeded = sourceBuilder.maximumThreadsNeeded;
+      this.neededThreadCount = sourceBuilder.neededThreadCount;
     }
     this.finalized = new AtomicBoolean(false);
   }
@@ -117,13 +117,19 @@ public abstract class AbstractScriptBuilder {
    */
   public abstract void addSteps(ParallelScriptBuilder parallelSteps);
   
-  protected int getMaximumThreadsNeeded() {
-    return maximumThreadsNeeded;
+  /**
+   * Call to check how many threads this script will need to execute at the current build point.  
+   * This can give you an idea of how intensely parallel this script is.
+   * 
+   * @return Number of threads to run script at it's most parallel point
+   */
+  public int getNeededThreadCount() {
+    return neededThreadCount;
   }
   
   protected void maybeUpdatedMaximumThreads(int currentValue) {
-    if (maximumThreadsNeeded < currentValue) {
-      maximumThreadsNeeded = currentValue;
+    if (neededThreadCount < currentValue) {
+      neededThreadCount = currentValue;
     }
   }
   
@@ -160,7 +166,7 @@ public abstract class AbstractScriptBuilder {
    */
   public ExecutableScript build() {
     maybeFinalize();
-    return new ExecutableScript(maximumThreadsNeeded, stepRunners);
+    return new ExecutableScript(neededThreadCount, stepRunners);
   }
   
   /**
