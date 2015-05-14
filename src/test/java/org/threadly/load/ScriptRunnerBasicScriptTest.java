@@ -8,7 +8,7 @@ import org.threadly.util.Clock;
 import org.threadly.util.StringUtils;
 
 @SuppressWarnings("javadoc")
-public class ScriptRunnerTest {
+public class ScriptRunnerBasicScriptTest {
   private static final String intKey = "int";
   private static final String longKey = "long";
   private static final String doubleKey = "double";

@@ -25,33 +25,18 @@ public class ScriptRunner {
    * @throws InterruptedException Thrown if this thread is interrupted while waiting on test to run
    */
   public static void main(String[] args) throws InterruptedException {
-    ExecutableScript script = parseArgsAndGetScript(args);
-    long start = Clock.accurateForwardProgressingMillis();
-    List<ListenableFuture<StepResult>> futures = script.startScript();
-    List<StepResult> fails = StepResultCollectionUtils.getAllFailedResults(futures);
-    long end = Clock.accurateForwardProgressingMillis();
-    if (fails.isEmpty()) {
-      System.out.println("All tests passed after running for " + ((end - start) / 1000) + " seconds");
-      double averageRunMillis = StepResultCollectionUtils.getAverageRuntime(futures, TimeUnit.MILLISECONDS);
-      System.out.println("Average time spent per test step: " + averageRunMillis + " milliseconds");
-      StepResult longestStep = StepResultCollectionUtils.getLongestRuntimeStep(futures);
-      System.out.println("Longest running step: " + longestStep.getDescription() + 
-                           ", ran for: " + longestStep.getRunTime(TimeUnit.MILLISECONDS) + " milliseconds");
-    } else {
-      System.out.println(fails.size() + " TEST FAILED!!");
-      Iterator<StepResult> it = fails.iterator();
-      while (it.hasNext()) {
-        StepResult tr = it.next();
-        System.out.println("Test " + tr.getDescription() + " failed for cause:");
-        tr.getError().printStackTrace();
-      }
-    }
+    new ScriptRunner(args).runScript();
   }
+
+  private final ExecutableScript script;
   
-  private static ExecutableScript parseArgsAndGetScript(String[] args) {
+  protected ScriptRunner(String[] args) {
     if (args.length == 0) {
       System.err.println("No arguments provided, need ScriptFactory class");
       usageAndExit(null);
+      // in test situations usageAndExit may not exit
+      script = null;
+      return;
     }
     
     String classStr = args[0];
@@ -88,9 +73,14 @@ public class ScriptRunner {
       }
     }
     
+    // may be null in test situations, not a normal case
+    if (factory == null) {
+      script = null;
+      return;
+    }
     factory.initialize(props);
     try {
-      return factory.buildScript();
+      script = factory.buildScript();
     } catch (TestParameterException e) {
       Map<String, String> paramDocs = factory.getPossibleParameters();
       if (paramDocs == null || paramDocs.isEmpty()) {
@@ -125,12 +115,35 @@ public class ScriptRunner {
     }
   }
   
-  private static void usageAndExit(String runningScript) {
+  protected void usageAndExit(String runningScript) {
     if (runningScript == null || runningScript.isEmpty()) {
       runningScript = "script.factory.to.call";
     }
-    System.out.println("java " + ScriptRunner.class.getName() + 
+    System.err.println("java " + ScriptRunner.class.getName() + 
                          " " + runningScript + " key1=value1 key2=value2....");
     System.exit(1);
+  }
+  
+  private void runScript() throws InterruptedException {
+    long start = Clock.accurateForwardProgressingMillis();
+    List<ListenableFuture<StepResult>> futures = script.startScript();
+    List<StepResult> fails = StepResultCollectionUtils.getAllFailedResults(futures);
+    long end = Clock.accurateForwardProgressingMillis();
+    if (fails.isEmpty()) {
+      System.out.println("All tests passed after running for " + ((end - start) / 1000) + " seconds");
+      double averageRunMillis = StepResultCollectionUtils.getAverageRuntime(futures, TimeUnit.MILLISECONDS);
+      System.out.println("Average time spent per test step: " + averageRunMillis + " milliseconds");
+      StepResult longestStep = StepResultCollectionUtils.getLongestRuntimeStep(futures);
+      System.out.println("Longest running step: " + longestStep.getDescription() + 
+                           ", ran for: " + longestStep.getRunTime(TimeUnit.MILLISECONDS) + " milliseconds");
+    } else {
+      System.out.println(fails.size() + " TEST FAILED!!");
+      Iterator<StepResult> it = fails.iterator();
+      while (it.hasNext()) {
+        StepResult tr = it.next();
+        System.out.println("Test " + tr.getDescription() + " failed for cause:");
+        tr.getError().printStackTrace();
+      }
+    }
   }
 }

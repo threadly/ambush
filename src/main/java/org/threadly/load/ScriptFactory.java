@@ -20,7 +20,7 @@ import org.threadly.util.ArgumentVerifier;
  * @author jent - Mike Jensen
  */
 public abstract class ScriptFactory {
-  private Properties properties = null;
+  protected Properties properties = null;
   
   protected void initialize(Properties properties) {
     ArgumentVerifier.assertNotNull(properties, "properties");
