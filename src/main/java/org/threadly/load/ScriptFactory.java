@@ -45,8 +45,29 @@ public abstract class ScriptFactory {
   }
   
   /**
+   * Returns a boolean value parameter for the given key.  If no value for the given key is found, 
+   * a {@link TestParameterException} will be thrown.  If the parameter may or may not exist use 
+   * {@link #getBoolValue(String, boolean)}.  If unable to parse the boolean for the key a 
+   * {@link TestParameterException}.  It is expected that the string value to represent the 
+   * boolean will be either {@code "true"} or {@code "false"}.
+   * 
+   * @param key Key to lookup the boolean value from 
+   * @return Boolean parameter value or the provided default if none is found
+   */
+  public boolean getBoolValue(String key) {
+    String str = getStringValue(key);
+    if (str.equalsIgnoreCase("true")) {
+      return true;
+    } else if (str.equalsIgnoreCase("false")) {
+      return false;
+    } else {
+      throw new TestParameterException("Can not parse boolean from: " + str);
+    }
+  }
+  
+  /**
    * Returns an int value parameter for the given key.  If no value for the given key is found,
-   * a {@link TestParameterException} will be thrown.  If you the parameter may or may not exist use 
+   * a {@link TestParameterException} will be thrown.  If the parameter may or may not exist use 
    * {@link #getIntValue(String, int)}.  If unable to parse the integer for the key a 
    * {@link TestParameterException} will be thrown with a {@link NumberFormatException} being the 
    * cause.
@@ -64,7 +85,7 @@ public abstract class ScriptFactory {
   
   /**
    * Returns a long value parameter for the given key.  If no value for the given key is found,
-   * a {@link TestParameterException} will be thrown.  If you the parameter may or may not exist use 
+   * a {@link TestParameterException} will be thrown.  If the parameter may or may not exist use 
    * {@link #getLongValue(String, long)}.  If unable to parse the long for the key a 
    * {@link TestParameterException} will be thrown with a {@link NumberFormatException} being the 
    * cause.
@@ -82,7 +103,7 @@ public abstract class ScriptFactory {
   
   /**
    * Returns a double value parameter for the given key.  If no value for the given key is found,
-   * a {@link TestParameterException} will be thrown.  If you the parameter may or may not exist use 
+   * a {@link TestParameterException} will be thrown.  If the parameter may or may not exist use 
    * {@link #getDoubleValue(String, double)}.  If unable to parse the double for the key a 
    * {@link TestParameterException} will be thrown with a {@link NumberFormatException} being the 
    * cause.
@@ -100,7 +121,7 @@ public abstract class ScriptFactory {
   
   /**
    * Returns a string value parameter for the given key.  If no value for the given key is found,
-   * a {@link TestParameterException} will be thrown.  If you the parameter may or may not exist use 
+   * a {@link TestParameterException} will be thrown.  If the parameter may or may not exist use 
    * {@link #getStringValue(String, String)}.
    * 
    * @param key Key to lookup the String value from 
@@ -112,6 +133,29 @@ public abstract class ScriptFactory {
       throw new TestParameterException("No property for key: " + key);
     }
     return result;
+  }
+  
+  /**
+   * Returns a boolean value parameter for the given key.  If no value for the given key is found 
+   * then the provided default will be returned.  If unable to parse the boolean for the key a 
+   * {@link TestParameterException}.  It is expected that the string value to represent the 
+   * boolean will be either {@code "true"} or {@code "false"}.
+   * 
+   * @param key Key to lookup the boolean value from 
+   * @param defaultVal Value to be returned if there is no value for the key
+   * @return Boolean parameter value or the provided default if none is found
+   */
+  public boolean getBoolValue(String key, boolean defaultVal) {
+    String result = properties.getProperty(key);
+    if (result == null) {
+      return defaultVal;
+    } else if (result.equalsIgnoreCase("true")) {
+      return true;
+    } else if (result.equalsIgnoreCase("false")) {
+      return false;
+    } else {
+      throw new TestParameterException("Can not parse boolean from: " + result);
+    }
   }
   
   /**

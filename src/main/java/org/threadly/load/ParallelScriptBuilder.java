@@ -15,7 +15,7 @@ import org.threadly.load.SequentialScriptBuilder.SequentialStep;
  */
 public class ParallelScriptBuilder extends AbstractScriptBuilder {
   protected final ParallelStep currentStep;
-  private int threadsNeeded = 0;
+  private int stepsThreadsNeeded = 0;
   
   /**
    * Constructs a new {@link ParallelScriptBuilder}.  This can be used as either the start of a 
@@ -91,8 +91,8 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
   }
   
   private void incrementThreads(int value) {
-    threadsNeeded += value;
-    maybeUpdatedMaximumThreads(threadsNeeded);
+    stepsThreadsNeeded += value;
+    maybeUpdatedMaximumThreads(stepsThreadsNeeded);
   }
   
   /**

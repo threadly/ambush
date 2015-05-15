@@ -42,6 +42,33 @@ public class ScriptFactoryTest {
   }
   
   @Test
+  public void getBoolTest() {
+    String key = StringUtils.randomString(5);
+    properties.put(key, "true");
+    
+    assertTrue(factory.getBoolValue(key));
+  }
+  
+  @Test
+  public void getBoolParseFail() {
+    String key = StringUtils.randomString(5);
+    properties.put(key, StringUtils.randomString(5));
+    
+    try {
+      factory.getBoolValue(key);
+      fail("Exception should have thrown");
+    } catch (TestParameterException e) {
+      // expected
+    }
+  }
+  
+  @Test (expected = TestParameterException.class)
+  public void getBoolMissingFail() {
+    factory.getBoolValue("foo");
+    fail("Exception should have thrown");
+  }
+  
+  @Test
   public void getIntTest() {
     String key = StringUtils.randomString(5);
     int val = 10;
@@ -141,6 +168,24 @@ public class ScriptFactoryTest {
   public void getStringMissingFail() {
     factory.getStringValue("foo");
     fail("Exception should have thrown");
+  }
+  
+  @Test
+  public void getBoolDefaultTest() {
+    assertTrue(factory.getBoolValue(StringUtils.randomString(5), true));
+  }
+  
+  @Test
+  public void getBoolDefaultParseFail() {
+    String key = StringUtils.randomString(5);
+    properties.put(key, StringUtils.randomString(5));
+    
+    try {
+      factory.getBoolValue(key, true);
+      fail("Exception should have thrown");
+    } catch (TestParameterException e) {
+      // expected
+    }
   }
   
   @Test
