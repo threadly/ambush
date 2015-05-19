@@ -9,6 +9,8 @@ import java.util.concurrent.TimeUnit;
 import org.threadly.concurrent.future.ListenableFuture;
 import org.threadly.load.ScriptFactory.TestParameterException;
 import org.threadly.util.Clock;
+import org.threadly.util.ExceptionHandlerInterface;
+import org.threadly.util.ExceptionUtils;
 import org.threadly.util.StringUtils;
 
 /**
@@ -25,7 +27,45 @@ public class ScriptRunner {
    * @throws InterruptedException Thrown if this thread is interrupted while waiting on test to run
    */
   public static void main(String[] args) throws InterruptedException {
-    new ScriptRunner(args).runScript();
+    setupExceptionHandler();
+    ScriptRunner runner = null;
+    try {
+      runner = new ScriptRunner(args);
+    } catch (Throwable t) {
+      System.err.println("Unexpected failure when building script: ");
+      printFailureAndExit(t);
+    }
+    runner.runScript();
+  }
+  
+  /**
+   * Sets up a default {@link ExceptionHandlerInterface} so that if any uncaught exceptions occur, 
+   * the script will display the exception and exit.  There should never be any uncaught 
+   * exceptions, this likely would indicate a bug in Ambush. 
+   */
+  protected static void setupExceptionHandler() {
+    ExceptionUtils.setDefaultExceptionHandler(new ExceptionHandlerInterface() {
+      @Override
+      public void handleException(Throwable thrown) {
+        System.err.println("Unexpected uncaught exception: ");
+        printFailureAndExit(thrown);
+      }
+    });
+  }
+  
+  /**
+   * Prints the throwable to standard error then exits with a non-zero exit code which matches to 
+   * the throwable's message.
+   * 
+   * @param t The throwable which caused the failure
+   */
+  protected static void printFailureAndExit(Throwable t) {
+    t.printStackTrace();
+    int hashCode = StringUtils.makeNonNull(t.getMessage()).hashCode();
+    if (hashCode == 0) {
+      hashCode = -1;
+    }
+    System.exit(hashCode);
   }
 
   private final ExecutableScript script;
@@ -111,7 +151,7 @@ public class ScriptRunner {
       System.err.print(paramDefs.toString());
       
       usageAndExit(factory.getClass().getName());
-      throw e;
+      throw e;  // should not really throw unless someone has overridden {@link usageAndExit}
     }
   }
   
