@@ -101,6 +101,9 @@ public class ExecutableScript {
       result.addAll(it.next().getFutures());
     }
     
+    // perform a gc before starting execution so that we can run as smooth as possible
+    System.gc();
+    
     // TODO - move this to a regular class?
     scheduler.execute(new Runnable() {
       @Override
