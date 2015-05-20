@@ -5,7 +5,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.threadly.concurrent.future.ListenableFuture;
@@ -46,12 +45,16 @@ public abstract class AbstractScriptBuilder {
    * 
    * If there are steps running in parallel at the time of execution for this progress future it 
    * should be noted the number is a best guess, as no locking occurs during determining the 
-   * current progress.
+   * current progress.  
+   * 
+   * If the script is stopped (likely due to an error or step failure), this returned future will 
+   * complete in an error state (ie {@link ListenableFuture#get()} will throw a 
+   * {@code ExecutionException}.
    * 
    * @return A future which provide a double representing the percent of how much of the script has completed
    */
   public ListenableFuture<Double> addProgressFuture() {
-    SettableListenableFuture<Double> slf = new SettableListenableFuture<Double>();
+    SettableListenableFuture<Double> slf = new SettableListenableFuture<Double>(false);
     addStep(new ProgressScriptStep(slf));
     return slf;
   }
@@ -182,17 +185,21 @@ public abstract class AbstractScriptBuilder {
     }
 
     @Override
-    public void runChainItem(ExecutableScript script, Executor executor) {
-      List<? extends ListenableFuture<?>> scriptFutures = script.getRunningFutureSet();
-      double doneCount = 0;
-      Iterator<? extends ListenableFuture<?>> it = scriptFutures.iterator();
-      while (it.hasNext()) {
-        if (it.next().isDone()) {
-          doneCount++;
+    public void runChainItem(ExecutableScript script) {
+      try {
+        List<? extends ListenableFuture<?>> scriptFutures = script.getRunningFutureSet();
+        double doneCount = 0;
+        Iterator<? extends ListenableFuture<?>> it = scriptFutures.iterator();
+        while (it.hasNext()) {
+          if (it.next().isDone()) {
+            doneCount++;
+          }
         }
+        
+        slf.setResult((doneCount / scriptFutures.size()) * 100);
+      } catch (Exception e) {
+        slf.setFailure(e);
       }
-      
-      slf.setResult((doneCount / scriptFutures.size()) * 100);
     }
 
     @Override
@@ -236,10 +243,10 @@ public abstract class AbstractScriptBuilder {
     }
     
     @Override
-    public void runChainItem(ExecutableScript script, Executor executor) {
+    public void runChainItem(ExecutableScript script) {
       Iterator<ExecutionItem> it = steps.iterator();
       while (it.hasNext()) {
-        it.next().runChainItem(script, executor);
+        it.next().runChainItem(script);
       }
     }
   }
@@ -272,7 +279,7 @@ public abstract class AbstractScriptBuilder {
    * @author jent - Mike Jensen
    */
   protected static class ScriptStepRunner extends SettableListenableFuture<StepResult>
-                                        implements Runnable {
+                                          implements Runnable {
     protected final ScriptStepInterface scriptStep;
     
     protected ScriptStepRunner(ScriptStepInterface scriptStep) {
@@ -295,6 +302,11 @@ public abstract class AbstractScriptBuilder {
         result = new StepResult(scriptStep.getIdentifier(), endNanos - startNanos, t);
       }
       setResult(result);
+    }
+    
+    @Override
+    public String toString() {
+      return "StepRunner-" + scriptStep.getIdentifier() + "-" + Integer.toHexString(System.identityHashCode(this));
     }
   }
 }

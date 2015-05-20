@@ -2,9 +2,9 @@ package org.threadly.load;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.threadly.concurrent.PriorityScheduler;
@@ -20,7 +20,7 @@ import org.threadly.concurrent.future.SettableListenableFuture;
 public class ExecutableScript {
   protected final int neededThreadQty;
   protected final Collection<ExecutionItem> steps;
-  protected final AtomicReference<List<ListenableFuture<StepResult>>> runningFutureSet;
+  protected final AtomicReference<RunningScriptStorage> runningStorage;
   
   /**
    * Constructs a new {@link ExecutableScript}.  If the minimum threads needed don't match the 
@@ -34,7 +34,7 @@ public class ExecutableScript {
   public ExecutableScript(int neededThreadQty, Collection<ExecutionItem> steps) {
     this.neededThreadQty = neededThreadQty;
     this.steps = steps;
-    runningFutureSet = new AtomicReference<List<ListenableFuture<StepResult>>>(null);
+    runningStorage = new AtomicReference<RunningScriptStorage>(null);
   }
   
   /**
@@ -61,6 +61,17 @@ public class ExecutableScript {
     return result;
   }
   
+  // TODO - javadoc
+  protected RunningScriptStorage getRunningStorage() {
+    RunningScriptStorage storage = runningStorage.get();
+    if (storage == null) {
+      throw new IllegalStateException("Not running");
+    }
+    
+    return storage;
+  }
+
+  // TODO - should we hide this API?  Is the javadoc clear?
   /**
    * Returns the list of futures for the current test script run.  If not currently running this 
    * will be null.
@@ -68,7 +79,22 @@ public class ExecutableScript {
    * @return List of futures that will complete for the current execution
    */
   public List<ListenableFuture<StepResult>> getRunningFutureSet() {
-    return runningFutureSet.get();
+    return getRunningStorage().futures;
+  }
+  
+  // TODO - should we hide this API?  Is the javadoc clear?
+  /**
+   * This farms off tasks on to another thread for execution.  This may not execute if the script 
+   * has already stopped (likely from an error or failed step).  In those cases the task's future 
+   * was already canceled so execution should not be needed.
+   * 
+   * @param toRun Task to be executed
+   */
+  public void executeAsyncIfStillRunning(Runnable toRun) {
+    RunningScriptStorage storage = runningStorage.get();
+    if (storage != null) {
+      storage.scheduler.execute(toRun);
+    }
   }
   
   /**
@@ -90,11 +116,12 @@ public class ExecutableScript {
    */
   public List<ListenableFuture<StepResult>> startScript() {
     final List<ListenableFuture<StepResult>> result = new ArrayList<ListenableFuture<StepResult>>();
-    if (! runningFutureSet.compareAndSet(null, result)) {
+    // scheduler is shutdown when runningStorage is cleared out
+    PriorityScheduler scheduler = new PriorityScheduler(neededThreadQty + 1);
+    scheduler.prestartAllThreads();
+    if (! runningStorage.compareAndSet(null, new RunningScriptStorage(result, scheduler))) {
       throw new IllegalStateException("Script already running in parallel");
     }
-    final PriorityScheduler scheduler = new PriorityScheduler(neededThreadQty + 1);
-    scheduler.prestartAllThreads();
     
     Iterator<ExecutionItem> it = steps.iterator();
     while (it.hasNext()) {
@@ -111,7 +138,7 @@ public class ExecutableScript {
         Iterator<ExecutionItem> it = steps.iterator();
         while (it.hasNext()) {
           ExecutionItem stepRunner = it.next();
-          stepRunner.runChainItem(ExecutableScript.this, scheduler);
+          stepRunner.runChainItem(ExecutableScript.this);
           // this call will block till the step is done, thus preventing execution of the next step
           try {
             if (StepResultCollectionUtils.getFailedResult(stepRunner.getFutures()) != null) {
@@ -128,17 +155,32 @@ public class ExecutableScript {
     
     /* with the way FutureUtils works, the ListenableFuture made here wont be able to be 
      * garbage collected, even though we don't have a reference to it.  Thus ensuring we 
-     * shutdown the scheduler we created here.
+     * cleanup our running references.
      */
     FutureUtils.makeCompleteFuture(result).addListener(new Runnable() {
       @Override
       public void run() {
-        runningFutureSet.set(null);
-        scheduler.shutdown();
+        // scheduler will be shutdown via finalizer
+        runningStorage.set(null);
       }
     });
     
     return result;
+  }
+  
+  /**
+   * <p>Storage that may be referenced while the script is executing.</p>
+   * 
+   * @author jent - Mike Jensen
+   */
+  private static class RunningScriptStorage {
+    public final List<ListenableFuture<StepResult>> futures;
+    public final PriorityScheduler scheduler;
+    
+    public RunningScriptStorage(List<ListenableFuture<StepResult>> futures, PriorityScheduler scheduler) {
+      this.futures = Collections.unmodifiableList(futures);
+      this.scheduler = scheduler;
+    }
   }
   
   /**
@@ -149,14 +191,13 @@ public class ExecutableScript {
    */
   public interface ExecutionItem {
     /**
-     * Run the current items execution.  This may execute out on the provided {@link Executor}, 
-     * but returned futures from {@link #getFutures()} should not fully complete until the chain 
-     * item completes.
+     * Run the current items execution.  This may execute async on the provided 
+     * {@link ExecutableScript}, but returned futures from {@link #getFutures()} should not fully 
+     * complete until the chain item completes.
      * 
      * @param script {@link ExecutableScript} which is performing the execution
-     * @param executor Executor that parallel work can be farmed off to
      */
-    public void runChainItem(ExecutableScript script, Executor executor);
+    public void runChainItem(ExecutableScript script);
 
     /**
      * Returns the collection of futures which represent this test.  There should be one future 

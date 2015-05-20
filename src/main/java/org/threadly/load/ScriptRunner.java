@@ -47,8 +47,10 @@ public class ScriptRunner {
     ExceptionUtils.setDefaultExceptionHandler(new ExceptionHandlerInterface() {
       @Override
       public void handleException(Throwable thrown) {
-        System.err.println("Unexpected uncaught exception: ");
-        printFailureAndExit(thrown);
+        synchronized (this) { // synchronized to prevent terminal corruption from multiple failures
+          System.err.println("Unexpected uncaught exception: ");
+          printFailureAndExit(thrown);
+        }
       }
     });
   }
