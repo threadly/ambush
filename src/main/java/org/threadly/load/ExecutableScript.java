@@ -5,7 +5,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.threadly.concurrent.PriorityScheduler;
 import org.threadly.concurrent.future.FutureUtils;
@@ -20,7 +20,7 @@ import org.threadly.concurrent.future.SettableListenableFuture;
 public class ExecutableScript {
   protected final int neededThreadQty;
   protected final Collection<ExecutionItem> steps;
-  protected final AtomicReference<RunningScriptStorage> runningStorage;
+  protected final ScriptAssistant scriptAssistant;
   
   /**
    * Constructs a new {@link ExecutableScript}.  If the minimum threads needed don't match the 
@@ -34,7 +34,7 @@ public class ExecutableScript {
   public ExecutableScript(int neededThreadQty, Collection<ExecutionItem> steps) {
     this.neededThreadQty = neededThreadQty;
     this.steps = steps;
-    runningStorage = new AtomicReference<RunningScriptStorage>(null);
+    scriptAssistant = new ScriptAssistant();
   }
   
   /**
@@ -61,42 +61,6 @@ public class ExecutableScript {
     return result;
   }
   
-  // TODO - javadoc
-  protected RunningScriptStorage getRunningStorage() {
-    RunningScriptStorage storage = runningStorage.get();
-    if (storage == null) {
-      throw new IllegalStateException("Not running");
-    }
-    
-    return storage;
-  }
-
-  // TODO - should we hide this API?  Is the javadoc clear?
-  /**
-   * Returns the list of futures for the current test script run.  If not currently running this 
-   * will be null.
-   * 
-   * @return List of futures that will complete for the current execution
-   */
-  public List<ListenableFuture<StepResult>> getRunningFutureSet() {
-    return getRunningStorage().futures;
-  }
-  
-  // TODO - should we hide this API?  Is the javadoc clear?
-  /**
-   * This farms off tasks on to another thread for execution.  This may not execute if the script 
-   * has already stopped (likely from an error or failed step).  In those cases the task's future 
-   * was already canceled so execution should not be needed.
-   * 
-   * @param toRun Task to be executed
-   */
-  public void executeAsyncIfStillRunning(Runnable toRun) {
-    RunningScriptStorage storage = runningStorage.get();
-    if (storage != null) {
-      storage.scheduler.execute(toRun);
-    }
-  }
-  
   /**
    * Starts the execution of the script.  It will traverse through the execution graph an execute 
    * things as previously defined by using the builder.  
@@ -115,34 +79,32 @@ public class ExecutableScript {
    * @return A collection of futures which will represent each execution step
    */
   public List<ListenableFuture<StepResult>> startScript() {
-    final List<ListenableFuture<StepResult>> result = new ArrayList<ListenableFuture<StepResult>>();
-    // scheduler is shutdown when runningStorage is cleared out
-    PriorityScheduler scheduler = new PriorityScheduler(neededThreadQty + 1);
-    scheduler.prestartAllThreads();
-    if (! runningStorage.compareAndSet(null, new RunningScriptStorage(result, scheduler))) {
-      throw new IllegalStateException("Script already running in parallel");
-    }
+    ArrayList<ListenableFuture<StepResult>> result = new ArrayList<ListenableFuture<StepResult>>();
     
     Iterator<ExecutionItem> it = steps.iterator();
     while (it.hasNext()) {
       result.addAll(it.next().getFutures());
     }
     
+    result.trimToSize();
+    
+    scriptAssistant.start(neededThreadQty + 1, result);
+    
     // perform a gc before starting execution so that we can run as smooth as possible
     System.gc();
     
     // TODO - move this to a regular class?
-    scheduler.execute(new Runnable() {
+    scriptAssistant.executeAsyncIfStillRunning(new Runnable() {
       @Override
       public void run() {
         Iterator<ExecutionItem> it = steps.iterator();
         while (it.hasNext()) {
           ExecutionItem stepRunner = it.next();
-          stepRunner.runChainItem(ExecutableScript.this);
+          stepRunner.runChainItem(scriptAssistant);
           // this call will block till the step is done, thus preventing execution of the next step
           try {
             if (StepResultCollectionUtils.getFailedResult(stepRunner.getFutures()) != null) {
-              FutureUtils.cancelIncompleteFutures(result, true);
+              FutureUtils.cancelIncompleteFutures(scriptAssistant.getRunningFutureSet(), true);
               return;
             }
           } catch (InterruptedException e) {
@@ -153,33 +115,55 @@ public class ExecutableScript {
       }
     });
     
-    /* with the way FutureUtils works, the ListenableFuture made here wont be able to be 
-     * garbage collected, even though we don't have a reference to it.  Thus ensuring we 
-     * cleanup our running references.
-     */
-    FutureUtils.makeCompleteFuture(result).addListener(new Runnable() {
-      @Override
-      public void run() {
-        // scheduler will be shutdown via finalizer
-        runningStorage.set(null);
-      }
-    });
-    
     return result;
   }
   
   /**
-   * <p>Storage that may be referenced while the script is executing.</p>
+   * <p>Small class for managing access and needs from running script steps.</p>
    * 
    * @author jent - Mike Jensen
    */
-  private static class RunningScriptStorage {
-    public final List<ListenableFuture<StepResult>> futures;
-    public final PriorityScheduler scheduler;
+  private static class ScriptAssistant implements ExecutionItem.ExecutionAssistant {
+    private final AtomicBoolean running;
+    private List<ListenableFuture<StepResult>> futures = null;
+    private PriorityScheduler scheduler = null;
     
-    public RunningScriptStorage(List<ListenableFuture<StepResult>> futures, PriorityScheduler scheduler) {
+    public ScriptAssistant() {
+      running = new AtomicBoolean(false);
+    }
+    
+    public void start(int threadPoolSize, List<ListenableFuture<StepResult>> futures) {
+      if (! running.compareAndSet(false, true)) {
+        throw new IllegalStateException("Already running");
+      }
+      scheduler = new PriorityScheduler(threadPoolSize);
+      scheduler.prestartAllThreads();
       this.futures = Collections.unmodifiableList(futures);
-      this.scheduler = scheduler;
+      
+      /* with the way FutureUtils works, the ListenableFuture made here wont be able to be 
+       * garbage collected, even though we don't have a reference to it.  Thus ensuring we 
+       * cleanup our running references.
+       */
+      FutureUtils.makeCompleteFuture(futures).addListener(new Runnable() {
+        @Override
+        public void run() {
+          scheduler = null;
+          running.set(false);
+        }
+      });
+    }
+
+    @Override
+    public List<ListenableFuture<StepResult>> getRunningFutureSet() {
+      return futures;
+    }
+    
+    @Override
+    public void executeAsyncIfStillRunning(Runnable toRun) {
+      PriorityScheduler scheduler = this.scheduler;
+      if (scheduler != null) {
+        scheduler.execute(toRun);
+      }
     }
   }
   
@@ -192,12 +176,12 @@ public class ExecutableScript {
   public interface ExecutionItem {
     /**
      * Run the current items execution.  This may execute async on the provided 
-     * {@link ExecutableScript}, but returned futures from {@link #getFutures()} should not fully 
+     * {@link ExecutionAssistant}, but returned futures from {@link #getFutures()} should not fully 
      * complete until the chain item completes.
      * 
-     * @param script {@link ExecutableScript} which is performing the execution
+     * @param script {@link ExecutionAssistant} which is performing the execution
      */
-    public void runChainItem(ExecutableScript script);
+    public void runChainItem(ExecutionAssistant script);
 
     /**
      * Returns the collection of futures which represent this test.  There should be one future 
@@ -213,5 +197,30 @@ public class ExecutableScript {
      * @return A copy of the test item
      */
     public ExecutionItem makeCopy();
+    
+    /**
+     * <p>Class passed to the test item at the start of execution.  This can provide information 
+     * and facilities it can use to perform it's execution.</p>
+     * 
+     * @author jent - Mike Jensen
+     */
+    public interface ExecutionAssistant {
+      /**
+       * This farms off tasks on to another thread for execution.  This may not execute if the script 
+       * has already stopped (likely from an error or failed step).  In those cases the task's future 
+       * was already canceled so execution should not be needed.
+       * 
+       * @param toRun Task to be executed
+       */
+      public void executeAsyncIfStillRunning(Runnable toRun);
+      
+      /**
+       * Returns the list of futures for the current test script run.  If not currently running this 
+       * will be null.
+       * 
+       * @return List of futures that will complete for the current execution
+       */
+      public List<ListenableFuture<StepResult>> getRunningFutureSet();
+    }
   }
 }

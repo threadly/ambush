@@ -185,9 +185,9 @@ public abstract class AbstractScriptBuilder {
     }
 
     @Override
-    public void runChainItem(ExecutableScript script) {
+    public void runChainItem(ExecutionAssistant assistant) {
       try {
-        List<? extends ListenableFuture<?>> scriptFutures = script.getRunningFutureSet();
+        List<? extends ListenableFuture<?>> scriptFutures = assistant.getRunningFutureSet();
         double doneCount = 0;
         Iterator<? extends ListenableFuture<?>> it = scriptFutures.iterator();
         while (it.hasNext()) {
@@ -243,10 +243,10 @@ public abstract class AbstractScriptBuilder {
     }
     
     @Override
-    public void runChainItem(ExecutableScript script) {
+    public void runChainItem(ExecutionAssistant assistant) {
       Iterator<ExecutionItem> it = steps.iterator();
       while (it.hasNext()) {
-        it.next().runChainItem(script);
+        it.next().runChainItem(assistant);
       }
     }
   }

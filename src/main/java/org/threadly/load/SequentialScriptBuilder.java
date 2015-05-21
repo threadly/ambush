@@ -111,7 +111,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
     }
     
     @Override
-    public void runChainItem(ExecutableScript runningScriptBuilder) {
+    public void runChainItem(ExecutionAssistant coordinator) {
       scriptStepRunner.run();
     }
 
@@ -129,11 +129,11 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
   // TODO - can this be put into StepCollectionRunner
   protected static class SequentialStep extends StepCollectionRunner {
     @Override
-    public void runChainItem(ExecutableScript runningScriptBuilder) {
+    public void runChainItem(ExecutionAssistant assistant) {
       Iterator<ExecutionItem> it = steps.iterator();
       while (it.hasNext()) {
         ExecutionItem chainItem = it.next();
-        chainItem.runChainItem(runningScriptBuilder);
+        chainItem.runChainItem(assistant);
         // this call will block till execution is done, thus making us wait to run the next chain item
         try {
           if (StepResultCollectionUtils.getFailedResult(chainItem.getFutures()) != null) {
