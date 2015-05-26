@@ -3,7 +3,7 @@ package org.threadly.load;
 import static org.junit.Assert.*;
 
 import org.junit.Test;
-import org.threadly.load.ScriptFactory.TestParameterException;
+import org.threadly.load.ScriptFactory.ScriptParameterException;
 import org.threadly.load.ScriptFactoryTest.TestScriptFactory;
 import org.threadly.util.StringUtils;
 
@@ -26,7 +26,7 @@ public class ScriptRunnerErrorTest {
   }
   
   @SuppressWarnings("unused")
-  @Test (expected = TestParameterException.class)
+  @Test (expected = ScriptParameterException.class)
   public void errorDurringScriptGenerationTest() {
     new TestScriptRunner(new String[]{TestScriptFactory.class.getName()});
   }

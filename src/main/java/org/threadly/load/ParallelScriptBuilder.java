@@ -1,7 +1,9 @@
 package org.threadly.load;
 
-import java.util.Collection;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
+
 import org.threadly.concurrent.future.SettableListenableFuture;
 import org.threadly.load.ExecutableScript.ExecutionItem;
 import org.threadly.load.SequentialScriptBuilder.SequentialStep;
@@ -158,7 +160,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
    */
   private static class SequentialScriptWrapper implements ExecutionItem {
     private final SequentialStep sequentialStep;
-    private final Collection<? extends SettableListenableFuture<StepResult>> futures;
+    private final List<? extends SettableListenableFuture<StepResult>> futures;
     
     public SequentialScriptWrapper(SequentialScriptBuilder sequentialScript) {
       sequentialScript.verifyValid();
@@ -169,6 +171,14 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
     private SequentialScriptWrapper(SequentialStep sequentialStep) {
       this.sequentialStep = sequentialStep;
       futures = sequentialStep.getFutures();
+    }
+
+    @SuppressWarnings("rawtypes")
+    @Override
+    public void prepareForRun() {
+      if (futures instanceof ArrayList) {
+        ((ArrayList)futures).trimToSize();
+      }
     }
     
     @Override
@@ -183,7 +193,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
     }
 
     @Override
-    public Collection<? extends SettableListenableFuture<StepResult>> getFutures() {
+    public List<? extends SettableListenableFuture<StepResult>> getFutures() {
       return futures;
     }
 

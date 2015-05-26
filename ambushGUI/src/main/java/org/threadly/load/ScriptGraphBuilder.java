@@ -1,12 +1,10 @@
 package org.threadly.load;
 
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.threadly.load.AbstractScriptFactoryInitializer;
 import org.threadly.load.ExecutableScript.ExecutionItem;
 import org.threadly.load.ExecutableScript.ExecutionItem.ChildItems;
 import org.threadly.load.gui.Node;
@@ -19,16 +17,31 @@ import org.threadly.load.gui.Node;
  * @author jent - Mike Jensen
  */
 public class ScriptGraphBuilder extends AbstractScriptFactoryInitializer {
+  /**
+   * Builds a graph from an array of arguments.  It is expected that the first argument is the 
+   * {@link ScriptFactory} class.  The following arguments should be parameters for that factory 
+   * in the form of key=value.
+   * 
+   * @param args Arguments to construct {@link ScriptFactory} with
+   * @return The head node for the graph provided from the script
+   */
   public static Node buildGraph(String[] args) {
     return new ScriptGraphBuilder(args).makeGraph();
   }
   
-  public static Node makeGraph(Collection<ExecutionItem> steps) {
+  /**
+   * Makes a {@link Node} graph from the list of provided steps.  It is expected that these 
+   * initial steps are ran sequentially between each other, but it can handle steps which fork 
+   * out into parallel channels.
+   * 
+   * @param steps Collection of sequential steps to start graph production from
+   * @return Head node of a graph which matches the steps execution
+   */
+  public static Node makeGraph(ExecutionItem[] steps) {
     Node head = new Node("start");
     Node current = head;
-    Iterator<ExecutionItem> it = steps.iterator();
-    while (it.hasNext()) {
-      current = expandNode(current, it.next(), new AtomicInteger());
+    for (ExecutionItem step : steps) {
+      current = expandNode(current, step, new AtomicInteger());
     }
     
     head.cleanGraph();
@@ -78,11 +91,11 @@ public class ScriptGraphBuilder extends AbstractScriptFactoryInitializer {
     }
   }
 
-  public ScriptGraphBuilder(String[] args) {
+  protected ScriptGraphBuilder(String[] args) {
     super(args);
   }
   
-  public Node makeGraph() {
+  protected Node makeGraph() {
     return ScriptGraphBuilder.makeGraph(script.steps);
   }
 }

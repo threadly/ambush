@@ -17,7 +17,7 @@
     <module name="PackageAnnotation"/>
     <module name="JavadocMethod">
       <property name="scope" value="public"/>
-      <property name="excludeScope" value="private"/>
+      <property name="excludeScope" value="protected"/>
       <property name="suppressLoadErrors" value="true"/>
     </module>
     <module name="JavadocStyle"/>
@@ -71,9 +71,6 @@
     <module name="EqualsHashCode"/>
     <module name="IllegalThrows">
       <property name="ignoredMethodNames" value="finalize, call, acceptConsumedItem"/>
-    </module>
-    <module name="MagicNumber">
-      <property name="ignoreNumbers" value="-2, -1, 0, 1, 2, 10, 100, 1000"/>
     </module>
     <module name="MissingSwitchDefault"/>
     <module name="NoFinalizer">

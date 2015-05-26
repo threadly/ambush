@@ -31,7 +31,8 @@ public class AmbushGui {
       try {
         AmbushGraph gui = new AmbushGraph(scheduler, display);
         
-        /*Node head = new Node("head");
+        /* Test graph:
+        Node head = new Node("head");
         Node chain1s1 = new Node("chain1s1");
         head.addChildNode(chain1s1);
         Node chain2s1 = new Node("chain2s1");

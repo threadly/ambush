@@ -155,7 +155,7 @@ public class Node {
       } else {
         originalNodes = null;
       }
-    } while (originalNodes != null && ! originalNodes.equals(childNodes));  // continue to loop till iterated through all sections of join only nodes
+    } while (originalNodes != null && ! originalNodes.equals(childNodes));  // loop through all join only nodes
     if (modifiedNodes) {
       cleanGraph(); // restart check if children changed
       return;

@@ -4,7 +4,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 
-import org.threadly.load.ScriptFactory.TestParameterException;
+import org.threadly.load.ScriptFactory.ScriptParameterException;
 import org.threadly.util.StringUtils;
 
 /**
@@ -67,7 +67,7 @@ abstract class AbstractScriptFactoryInitializer {
     factory.initialize(props);
     try {
       script = factory.buildScript();
-    } catch (TestParameterException e) {
+    } catch (ScriptParameterException e) {
       Map<String, String> paramDocs = factory.getPossibleParameters();
       if (paramDocs == null || paramDocs.isEmpty()) {
         throw e;

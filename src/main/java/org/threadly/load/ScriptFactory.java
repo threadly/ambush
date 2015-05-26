@@ -33,7 +33,7 @@ public abstract class ScriptFactory {
    * {@link ScriptRunner}.  This provides documentation for what parameters are used by this 
    * builder.  If someone fails to provide a parameter this will be displayed to the CLI so that 
    * it makes it easier to know what was missing.  This is triggered by throwing 
-   * {@link TestParameterException}.  
+   * {@link ScriptParameterException}.  
    * 
    * This map is structured such that the key represents the parameter key.  The value is an 
    * optional description to describe what the key represents.
@@ -46,9 +46,9 @@ public abstract class ScriptFactory {
   
   /**
    * Returns a boolean value parameter for the given key.  If no value for the given key is found, 
-   * a {@link TestParameterException} will be thrown.  If the parameter may or may not exist use 
+   * a {@link ScriptParameterException} will be thrown.  If the parameter may or may not exist use 
    * {@link #getBoolValue(String, boolean)}.  If unable to parse the boolean for the key a 
-   * {@link TestParameterException}.  It is expected that the string value to represent the 
+   * {@link ScriptParameterException}.  It is expected that the string value to represent the 
    * boolean will be either {@code "true"} or {@code "false"}.
    * 
    * @param key Key to lookup the boolean value from 
@@ -61,15 +61,15 @@ public abstract class ScriptFactory {
     } else if (str.equalsIgnoreCase("false")) {
       return false;
     } else {
-      throw new TestParameterException("Can not parse boolean from: " + str);
+      throw new ScriptParameterException("Can not parse boolean from: " + str);
     }
   }
   
   /**
    * Returns an int value parameter for the given key.  If no value for the given key is found,
-   * a {@link TestParameterException} will be thrown.  If the parameter may or may not exist use 
+   * a {@link ScriptParameterException} will be thrown.  If the parameter may or may not exist use 
    * {@link #getIntValue(String, int)}.  If unable to parse the integer for the key a 
-   * {@link TestParameterException} will be thrown with a {@link NumberFormatException} being the 
+   * {@link ScriptParameterException} will be thrown with a {@link NumberFormatException} being the 
    * cause.
    * 
    * @param key Key to lookup the integer value from
@@ -79,15 +79,15 @@ public abstract class ScriptFactory {
     try {
       return Integer.parseInt(getStringValue(key));
     } catch (NumberFormatException e) {
-      throw new TestParameterException(e);
+      throw new ScriptParameterException(e);
     }
   }
   
   /**
    * Returns a long value parameter for the given key.  If no value for the given key is found,
-   * a {@link TestParameterException} will be thrown.  If the parameter may or may not exist use 
+   * a {@link ScriptParameterException} will be thrown.  If the parameter may or may not exist use 
    * {@link #getLongValue(String, long)}.  If unable to parse the long for the key a 
-   * {@link TestParameterException} will be thrown with a {@link NumberFormatException} being the 
+   * {@link ScriptParameterException} will be thrown with a {@link NumberFormatException} being the 
    * cause.
    * 
    * @param key Key to lookup the long value from 
@@ -97,15 +97,15 @@ public abstract class ScriptFactory {
     try {
       return Long.parseLong(getStringValue(key));
     } catch (NumberFormatException e) {
-      throw new TestParameterException(e);
+      throw new ScriptParameterException(e);
     }
   }
   
   /**
    * Returns a double value parameter for the given key.  If no value for the given key is found,
-   * a {@link TestParameterException} will be thrown.  If the parameter may or may not exist use 
+   * a {@link ScriptParameterException} will be thrown.  If the parameter may or may not exist use 
    * {@link #getDoubleValue(String, double)}.  If unable to parse the double for the key a 
-   * {@link TestParameterException} will be thrown with a {@link NumberFormatException} being the 
+   * {@link ScriptParameterException} will be thrown with a {@link NumberFormatException} being the 
    * cause.
    * 
    * @param key Key to lookup the long value from 
@@ -115,13 +115,13 @@ public abstract class ScriptFactory {
     try {
       return Double.parseDouble(getStringValue(key));
     } catch (NumberFormatException e) {
-      throw new TestParameterException(e);
+      throw new ScriptParameterException(e);
     }
   }
   
   /**
    * Returns a string value parameter for the given key.  If no value for the given key is found,
-   * a {@link TestParameterException} will be thrown.  If the parameter may or may not exist use 
+   * a {@link ScriptParameterException} will be thrown.  If the parameter may or may not exist use 
    * {@link #getStringValue(String, String)}.
    * 
    * @param key Key to lookup the String value from 
@@ -130,7 +130,7 @@ public abstract class ScriptFactory {
   public String getStringValue(String key) {
     String result = properties.getProperty(key);
     if (result == null) {
-      throw new TestParameterException("No property for key: " + key);
+      throw new ScriptParameterException("No property for key: " + key);
     }
     return result;
   }
@@ -138,7 +138,7 @@ public abstract class ScriptFactory {
   /**
    * Returns a boolean value parameter for the given key.  If no value for the given key is found 
    * then the provided default will be returned.  If unable to parse the boolean for the key a 
-   * {@link TestParameterException}.  It is expected that the string value to represent the 
+   * {@link ScriptParameterException}.  It is expected that the string value to represent the 
    * boolean will be either {@code "true"} or {@code "false"}.
    * 
    * @param key Key to lookup the boolean value from 
@@ -154,14 +154,14 @@ public abstract class ScriptFactory {
     } else if (result.equalsIgnoreCase("false")) {
       return false;
     } else {
-      throw new TestParameterException("Can not parse boolean from: " + result);
+      throw new ScriptParameterException("Can not parse boolean from: " + result);
     }
   }
   
   /**
    * Returns an int value parameter for the given key.  If no value for the given key is found 
    * then the provided default will be returned.  If unable to parse the integer for the key a 
-   * {@link TestParameterException} will be thrown with a {@link NumberFormatException} being the 
+   * {@link ScriptParameterException} will be thrown with a {@link NumberFormatException} being the 
    * cause.
    * 
    * @param key Key to lookup the integer value from 
@@ -176,14 +176,14 @@ public abstract class ScriptFactory {
     try {
       return Integer.parseInt(result);
     } catch (NumberFormatException e) {
-      throw new TestParameterException(e);
+      throw new ScriptParameterException(e);
     }
   }
   
   /**
    * Returns a long value parameter for the given key.  If no value for the given key is found 
    * then the provided default will be returned.  If unable to parse the long for the key a 
-   * {@link TestParameterException} will be thrown with a {@link NumberFormatException} being the 
+   * {@link ScriptParameterException} will be thrown with a {@link NumberFormatException} being the 
    * cause.
    * 
    * @param key Key to lookup the long value from 
@@ -198,14 +198,14 @@ public abstract class ScriptFactory {
     try {
       return Long.parseLong(result);
     } catch (NumberFormatException e) {
-      throw new TestParameterException(e);
+      throw new ScriptParameterException(e);
     }
   }
   
   /**
    * Returns a double value parameter for the given key.  If no value for the given key is found 
    * then the provided default will be returned.  If unable to parse the double for the key a 
-   * {@link TestParameterException} will be thrown with a {@link NumberFormatException} being the 
+   * {@link ScriptParameterException} will be thrown with a {@link NumberFormatException} being the 
    * cause.
    * 
    * @param key Key to lookup the double value from 
@@ -220,7 +220,7 @@ public abstract class ScriptFactory {
     try {
       return Double.parseDouble(result);
     } catch (NumberFormatException e) {
-      throw new TestParameterException(e);
+      throw new ScriptParameterException(e);
     }
   }
   
@@ -265,22 +265,37 @@ public abstract class ScriptFactory {
    * 
    * @author jent - Mike Jensen
    */
-  protected static class TestParameterException extends RuntimeException {
+  public static class ScriptParameterException extends RuntimeException {
     private static final long serialVersionUID = -1913265153770464976L;
-
-    public TestParameterException() {
-      super();
-    }
     
-    public TestParameterException(String msg) {
+    /**
+     * Constructs a new {@link ScriptParameterException} with a provided message to indicate the 
+     * specific parameter violation.
+     * 
+     * @param msg Message to describe the parameter error
+     */
+    public ScriptParameterException(String msg) {
       super(msg);
     }
     
-    public TestParameterException(Throwable cause) {
+    /**
+     * Constructs a new {@link ScriptParameterException} with a cause exception which represents 
+     * the failure.
+     * 
+     * @param cause Exception which represents the initial failure from a provided parameter
+     */
+    public ScriptParameterException(Throwable cause) {
       super(cause);
     }
     
-    public TestParameterException(String msg, Throwable cause) {
+    /**
+     * Constructs a new {@link ScriptParameterException} with a provided message to indicate the 
+     * specific parameter violation, as well as an exception which represents the failure.
+     * 
+     * @param msg Message to describe the parameter error
+     * @param cause Exception which represents the failure
+     */
+    public ScriptParameterException(String msg, Throwable cause) {
       super(msg, cause);
     }
   }

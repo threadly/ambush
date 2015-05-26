@@ -1,7 +1,6 @@
 package org.threadly.load;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -20,7 +19,7 @@ import org.threadly.util.Clock;
  * @author jent - Mike Jensen
  */
 public abstract class AbstractScriptBuilder {
-  protected final Collection<ExecutionItem> stepRunners;
+  protected final ArrayList<ExecutionItem> stepRunners;
   private final AtomicBoolean finalized;
   private int neededThreadCount;
   private Exception replacementException = null;
@@ -141,6 +140,7 @@ public abstract class AbstractScriptBuilder {
     verifyValid();
     if (! finalized.getAndSet(true)) {
       finalizeStep();
+      stepRunners.trimToSize();
     }
   }
   
@@ -225,6 +225,11 @@ public abstract class AbstractScriptBuilder {
     }
 
     @Override
+    public void prepareForRun() {
+      // nothing to do here
+    }
+
+    @Override
     public void runChainItem(ExecutionAssistant assistant) {
       try {
         List<? extends ListenableFuture<?>> scriptFutures = assistant.getRunningFutureSet();
@@ -243,7 +248,7 @@ public abstract class AbstractScriptBuilder {
     }
 
     @Override
-    public Collection<? extends SettableListenableFuture<StepResult>> getFutures() {
+    public List<? extends SettableListenableFuture<StepResult>> getFutures() {
       return Collections.emptyList();
     }
 
@@ -271,14 +276,22 @@ public abstract class AbstractScriptBuilder {
    * @author jent - Mike Jensen
    */
   protected abstract static class StepCollectionRunner implements ExecutionItem {
-    protected final List<ExecutionItem> steps;
-    private final List<SettableListenableFuture<StepResult>> futures;
+    // TODO - move from arrayLists to arrays to save memory
+    protected final ArrayList<ExecutionItem> steps;
+    private final ArrayList<SettableListenableFuture<StepResult>> futures;
     
     public StepCollectionRunner() {
       steps = new ArrayList<ExecutionItem>();
       futures = new ArrayList<SettableListenableFuture<StepResult>>();
     }
+
+    @Override
+    public void prepareForRun() {
+      steps.trimToSize();
+      futures.trimToSize();
+    }
     
+    // TODO - remove?
     @Override
     public abstract StepCollectionRunner makeCopy();
     
@@ -288,7 +301,7 @@ public abstract class AbstractScriptBuilder {
     }
     
     @Override
-    public Collection<? extends SettableListenableFuture<StepResult>> getFutures() {
+    public List<? extends SettableListenableFuture<StepResult>> getFutures() {
       return futures;
     }
     
@@ -320,7 +333,12 @@ public abstract class AbstractScriptBuilder {
     }
 
     @Override
-    public Collection<SettableListenableFuture<StepResult>> getFutures() {
+    public void prepareForRun() {
+      // nothing to do here
+    }
+
+    @Override
+    public List<SettableListenableFuture<StepResult>> getFutures() {
       SettableListenableFuture<StepResult> slf = scriptStepRunner;
       return Collections.singletonList(slf);
     }
@@ -332,7 +350,7 @@ public abstract class AbstractScriptBuilder {
     
     @Override
     public String toString() {
-      return scriptStepRunner.scriptStep.getIdentifier();
+      return scriptStepRunner.toString();
     }
   }
   

@@ -1,7 +1,6 @@
 package org.threadly.load;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -19,7 +18,7 @@ import org.threadly.concurrent.future.SettableListenableFuture;
  */
 public class ExecutableScript {
   protected final int neededThreadQty;
-  protected final Collection<ExecutionItem> steps;
+  protected final ExecutionItem[] steps;
   protected final ScriptAssistant scriptAssistant;
   
   /**
@@ -31,9 +30,9 @@ public class ExecutableScript {
    * @param neededThreadQty Minimum number of threads to execute provided steps
    * @param steps Collection of steps which should be executed one after another
    */
-  public ExecutableScript(int neededThreadQty, Collection<ExecutionItem> steps) {
+  public ExecutableScript(int neededThreadQty, List<ExecutionItem> steps) {
     this.neededThreadQty = neededThreadQty;
-    this.steps = steps;
+    this.steps = steps.toArray(new ExecutionItem[steps.size()]);
     scriptAssistant = new ScriptAssistant();
   }
   
@@ -48,15 +47,15 @@ public class ExecutableScript {
   
   /**
    * Creates a copy of the {@link ExecutionItem} chain.  This could be provided to 
-   * {@link #ExecutableScript(int, Collection)} to produce another runnable script.
+   * {@link #ExecutableScript(int, List)} to produce another runnable script.
    *  
    * @return Copy of execution graph
    */
-  public Collection<ExecutionItem> makeItemsCopy() {
-    List<ExecutionItem> result = new ArrayList<ExecutionItem>(steps.size());
-    Iterator<ExecutionItem> it = steps.iterator();
-    while (it.hasNext()) {
-      result.add(it.next().makeCopy());
+  // TODO - remove?
+  public List<ExecutionItem> makeItemsCopy() {
+    List<ExecutionItem> result = new ArrayList<ExecutionItem>(steps.length);
+    for (ExecutionItem step : steps) {
+      result.add(step.makeCopy());
     }
     return result;
   }
@@ -71,21 +70,19 @@ public class ExecutableScript {
    * If a step was never executed due to a failure, those futures will be resolved in an error 
    * (thus calls to {@link ListenableFuture#get()} will throw a 
    * {@link java.util.concurrent.ExecutionException}).  You can use 
-   * {@link StepResultCollectionUtils#getFailedResult(Collection)} to see if any steps failed.  
+   * {@link StepResultCollectionUtils#getFailedResult(java.util.Collection)} to see if any steps failed.  
    * This will block till all steps have completed (or a failed test step occurred).  If 
-   * {@link StepResultCollectionUtils#getFailedResult(Collection)} returns null, then the test 
+   * {@link StepResultCollectionUtils#getFailedResult(java.util.Collection)} returns null, then the test 
    * completed without error. 
    * 
    * @return A collection of futures which will represent each execution step
    */
   public List<ListenableFuture<StepResult>> startScript() {
     ArrayList<ListenableFuture<StepResult>> result = new ArrayList<ListenableFuture<StepResult>>();
-    
-    Iterator<ExecutionItem> it = steps.iterator();
-    while (it.hasNext()) {
-      result.addAll(it.next().getFutures());
+    for (ExecutionItem step : steps) {
+      step.prepareForRun();
+      result.addAll(step.getFutures());
     }
-    
     result.trimToSize();
     
     scriptAssistant.start(neededThreadQty + 1, result);
@@ -97,13 +94,11 @@ public class ExecutableScript {
     scriptAssistant.executeAsyncIfStillRunning(new Runnable() {
       @Override
       public void run() {
-        Iterator<ExecutionItem> it = steps.iterator();
-        while (it.hasNext()) {
-          ExecutionItem stepRunner = it.next();
-          stepRunner.runChainItem(scriptAssistant);
+        for (ExecutionItem step : steps) {
+          step.runChainItem(scriptAssistant);
           // this call will block till the step is done, thus preventing execution of the next step
           try {
-            if (StepResultCollectionUtils.getFailedResult(stepRunner.getFutures()) != null) {
+            if (StepResultCollectionUtils.getFailedResult(step.getFutures()) != null) {
               FutureUtils.cancelIncompleteFutures(scriptAssistant.getRunningFutureSet(), true);
               return;
             }
@@ -175,6 +170,12 @@ public class ExecutableScript {
    */
   protected interface ExecutionItem {
     /**
+     * Called to allow the {@link ExecutionItem} do any cleanup, or other operations needed to 
+     * ensure a smooth invokation of {@link #runChainItem(ExecutionAssistant)}.
+     */
+    public void prepareForRun();
+    
+    /**
      * Run the current items execution.  This may execute async on the provided 
      * {@link ExecutionAssistant}, but returned futures from {@link #getFutures()} should not fully 
      * complete until the chain item completes.
@@ -189,13 +190,14 @@ public class ExecutableScript {
      * 
      * @return Collection of futures that provide results from their test steps
      */
-    public Collection<? extends SettableListenableFuture<StepResult>> getFutures();
+    public List<? extends SettableListenableFuture<StepResult>> getFutures();
     
     /**
      * Produces a copy of the item so that it can be run in another execution chain.
      * 
      * @return A copy of the test item
      */
+    // TODO - remove?
     public ExecutionItem makeCopy();
     
     /**

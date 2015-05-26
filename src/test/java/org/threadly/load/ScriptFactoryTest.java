@@ -7,7 +7,7 @@ import java.util.Properties;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.threadly.load.ScriptFactory.TestParameterException;
+import org.threadly.load.ScriptFactory.ScriptParameterException;
 import org.threadly.util.StringUtils;
 
 @SuppressWarnings("javadoc")
@@ -57,12 +57,12 @@ public class ScriptFactoryTest {
     try {
       factory.getBoolValue(key);
       fail("Exception should have thrown");
-    } catch (TestParameterException e) {
+    } catch (ScriptParameterException e) {
       // expected
     }
   }
   
-  @Test (expected = TestParameterException.class)
+  @Test (expected = ScriptParameterException.class)
   public void getBoolMissingFail() {
     factory.getBoolValue("foo");
     fail("Exception should have thrown");
@@ -85,13 +85,13 @@ public class ScriptFactoryTest {
     try {
       factory.getIntValue(key);
       fail("Exception should have thrown");
-    } catch (TestParameterException e) {
+    } catch (ScriptParameterException e) {
       // expected
       assertTrue(e.getCause() instanceof NumberFormatException);
     }
   }
   
-  @Test (expected = TestParameterException.class)
+  @Test (expected = ScriptParameterException.class)
   public void getIntMissingFail() {
     factory.getIntValue("foo");
     fail("Exception should have thrown");
@@ -114,13 +114,13 @@ public class ScriptFactoryTest {
     try {
       factory.getLongValue(key);
       fail("Exception should have thrown");
-    } catch (TestParameterException e) {
+    } catch (ScriptParameterException e) {
       // expected
       assertTrue(e.getCause() instanceof NumberFormatException);
     }
   }
   
-  @Test (expected = TestParameterException.class)
+  @Test (expected = ScriptParameterException.class)
   public void getLongMissingFail() {
     factory.getLongValue("foo");
     fail("Exception should have thrown");
@@ -143,13 +143,13 @@ public class ScriptFactoryTest {
     try {
       factory.getDoubleValue(key);
       fail("Exception should have thrown");
-    } catch (TestParameterException e) {
+    } catch (ScriptParameterException e) {
       // expected
       assertTrue(e.getCause() instanceof NumberFormatException);
     }
   }
   
-  @Test (expected = TestParameterException.class)
+  @Test (expected = ScriptParameterException.class)
   public void getDoubleMissingFail() {
     factory.getDoubleValue("foo");
     fail("Exception should have thrown");
@@ -164,7 +164,7 @@ public class ScriptFactoryTest {
     assertEquals(val, factory.getStringValue(key));
   }
   
-  @Test (expected = TestParameterException.class)
+  @Test (expected = ScriptParameterException.class)
   public void getStringMissingFail() {
     factory.getStringValue("foo");
     fail("Exception should have thrown");
@@ -183,7 +183,7 @@ public class ScriptFactoryTest {
     try {
       factory.getBoolValue(key, true);
       fail("Exception should have thrown");
-    } catch (TestParameterException e) {
+    } catch (ScriptParameterException e) {
       // expected
     }
   }
@@ -203,7 +203,7 @@ public class ScriptFactoryTest {
     try {
       factory.getIntValue(key, 10);
       fail("Exception should have thrown");
-    } catch (TestParameterException e) {
+    } catch (ScriptParameterException e) {
       // expected
       assertTrue(e.getCause() instanceof NumberFormatException);
     }
@@ -225,7 +225,7 @@ public class ScriptFactoryTest {
     try {
       factory.getLongValue(key, 10);
       fail("Exception should have thrown");
-    } catch (TestParameterException e) {
+    } catch (ScriptParameterException e) {
       // expected
       assertTrue(e.getCause() instanceof NumberFormatException);
     }
@@ -247,7 +247,7 @@ public class ScriptFactoryTest {
     try {
       factory.getDoubleValue(key, 8.8);
       fail("Exception should have thrown");
-    } catch (TestParameterException e) {
+    } catch (ScriptParameterException e) {
       // expected
       assertTrue(e.getCause() instanceof NumberFormatException);
     }
@@ -264,7 +264,7 @@ public class ScriptFactoryTest {
   protected static class TestScriptFactory extends ScriptFactory {
     @Override
     public ExecutableScript buildScript() {
-      throw new TestParameterException();
+      throw new ScriptParameterException("test failure");
     }
   }
 }

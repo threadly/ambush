@@ -17,11 +17,13 @@ import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.MouseMoveListener;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 import org.threadly.concurrent.PrioritySchedulerInterface;
+import org.threadly.util.ArgumentVerifier;
 import org.threadly.util.Clock;
 
 /**
@@ -30,26 +32,65 @@ import org.threadly.util.Clock;
  * @author jent - Mike Jensen
  */
 public class AmbushGraph implements DragDetectListener, MouseListener, MouseMoveListener {
-  private static final int X_SIZE = 1900;
-  private static final int Y_SIZE = 1400;
+  private static final int LARGE_X_SIZE = 1900;
+  private static final int LARGE_Y_SIZE = 1400;
+  private static final int SMALL_X_SIZE = 1280;
+  private static final int SMALL_Y_SIZE = 1024;
   private static final int DRAG_TOLLERANCE = 25;
-  private static final int REFRESH_DELAY = 500;
+  private static final int REFRESH_DELAY = 500; // how often to check for new guiNodeMap
   private static final int BACKGROUND_GRAY = 210;
-  private static final int GRID_SOFTNESS = 50;
+  private static final int GRID_SOFTNESS = 100;  // randomness for point placement
+  private static final int DISTANCE_FROM_EDGE = 75;  // dots wont be placed within this distance from the edge
   private static final Random RANDOM = new Random(Clock.lastKnownTimeMillis());
 
+  private final PrioritySchedulerInterface scheduler;
   private final Color backgroundColor;
   private final Shell shell;
   private volatile Map<Node, GuiPoint> guiNodeMap;
   private GuiPoint movingPoint = null;
   
-  public AmbushGraph(final PrioritySchedulerInterface scheduler, Display display) {
-    guiNodeMap = new HashMap<Node, GuiPoint>();
+  /**
+   * Constructs a new window which will display the graph of nodes.  Nodes will be provided via 
+   * {@link #updateGraphModel(Node)}.
+   * 
+   * @param scheduler Scheduler to schedule and execute tasks on to
+   * @param display A non-disposed display to open the shell on
+   */
+  public AmbushGraph(PrioritySchedulerInterface scheduler, Display display) {
+    this(scheduler, display, -1, -1);
+  }
+
+  /**
+   * Constructs a new window which will display the graph of nodes.  Nodes will be provided via 
+   * {@link #updateGraphModel(Node)}.  This constructor allows you to specify the original window 
+   * size.
+   * 
+   * @param scheduler Scheduler to schedule and execute tasks on to
+   * @param display A non-disposed display to open the shell on
+   * @param xSize Width in pixels for the window
+   * @param ySize Height in pixels for the window
+   */
+  public AmbushGraph(PrioritySchedulerInterface scheduler, Display display, int xSize, int ySize) {
+    ArgumentVerifier.assertNotNull(scheduler, "scheduler");
+    
+    if (xSize < 1 || ySize < 1) {
+      Rectangle displayBounds = display.getBounds();
+      if (displayBounds.width > LARGE_X_SIZE && displayBounds.height > LARGE_Y_SIZE) {
+        xSize = LARGE_X_SIZE;
+        ySize = LARGE_Y_SIZE;
+      } else {
+        xSize = SMALL_X_SIZE;
+        ySize = SMALL_Y_SIZE;
+      }
+    }
+    
+    this.scheduler = scheduler;
     backgroundColor = new Color(display, BACKGROUND_GRAY, BACKGROUND_GRAY, BACKGROUND_GRAY);
+    guiNodeMap = new HashMap<Node, GuiPoint>();
     
     shell = new Shell(display);
     shell.setText("Ambush execution graph");
-    shell.setSize(X_SIZE, Y_SIZE);
+    shell.setSize(xSize, ySize);
     shell.setBackground(backgroundColor);
     
     shell.addListener(SWT.Paint, new Listener() {
@@ -64,6 +105,14 @@ public class AmbushGraph implements DragDetectListener, MouseListener, MouseMove
     shell.addMouseMoveListener(this);
     
     guiNodeMap = Collections.emptyMap();
+  }
+
+  /**
+   * Opens the shell and handles doing the read and dispatch loop for the display.  This call will 
+   * block until the shell is closed.
+   */
+  public void runGuiLoop() {
+    shell.open();
     
     scheduler.scheduleWithFixedDelay(new Runnable() {
       private volatile boolean displayTaskExeced = false;
@@ -88,14 +137,6 @@ public class AmbushGraph implements DragDetectListener, MouseListener, MouseMove
         }
       }
     }, REFRESH_DELAY, REFRESH_DELAY);
-  }
-
-  /**
-   * Opens the shell and handles doing the read and dispatch loop for the display.  This call will 
-   * block until the shell is closed.
-   */
-  public void runGuiLoop() {
-    shell.open();
 
     while (! shell.isDisposed()) {
       if (! shell.getDisplay().readAndDispatch()) {
@@ -121,7 +162,9 @@ public class AmbushGraph implements DragDetectListener, MouseListener, MouseMove
                             int xRegion, int yRegion, Map<Integer, Integer> xRegionCountMap) {
     GuiPoint currentPoint = buildingMap.get(currentNode);
     if (currentPoint == null) {
-      currentPoint = new GuiPoint(makeRandomColor(), xRegionCountMap, xRegion, yRegion);
+      currentPoint = new GuiPoint(makeRandomColor(), xRegionCountMap, 
+                                  shell.getBounds().width, shell.getBounds().height, 
+                                  xRegion, yRegion);
       buildingMap.put(currentNode, currentPoint);
       increment(xRegion, xRegionCountMap);
       int childNodeRegion = yRegion - 1;
@@ -196,7 +239,8 @@ public class AmbushGraph implements DragDetectListener, MouseListener, MouseMove
         Node child = it2.next();
         GuiPoint childPoint = guiNodeMap.get(child);
         if (childPoint == null) {
-          System.err.println("***** " + entry.getKey().getName() + " is connected to an unknown node: " + child.getName() + " *****");
+          System.err.println("***** " + entry.getKey().getName() + 
+                               " is connected to an unknown node: " + child.getName() + " *****");
           continue;
         }
         
@@ -206,7 +250,7 @@ public class AmbushGraph implements DragDetectListener, MouseListener, MouseMove
       // Draw the label last
       gc.setForeground(new Color(shell.getDisplay(), 0, 0, 0));
       gc.setBackground(backgroundColor);
-      gc.drawText(entry.getKey().getName(), entry.getValue().getX() + 10, entry.getValue().getY() - 5);
+      gc.drawText(entry.getValue().xRegion + "/" + entry.getValue().yRegion + "-" + entry.getKey().getName(), entry.getValue().getX() + 10, entry.getValue().getY() - 5);
     }
   }
 
@@ -247,8 +291,8 @@ public class AmbushGraph implements DragDetectListener, MouseListener, MouseMove
   @Override
   public void mouseUp(MouseEvent me) {
     if (movingPoint != null) {
-      movingPoint.setPosition(Math.max(Math.min(me.x, X_SIZE - 25), 10), 
-                              Math.max(Math.min(me.y, Y_SIZE - 45), 10));
+      movingPoint.setPosition(Math.max(Math.min(me.x, shell.getBounds().width - 25), 10), 
+                              Math.max(Math.min(me.y, shell.getBounds().height - 45), 10));
 
       shell.redraw();
     }
@@ -258,8 +302,8 @@ public class AmbushGraph implements DragDetectListener, MouseListener, MouseMove
   @Override
   public void mouseMove(MouseEvent me) {
     if (movingPoint != null) {
-      movingPoint.setPosition(Math.max(Math.min(me.x, X_SIZE - 25), 10), 
-                              Math.max(Math.min(me.y, Y_SIZE - 45), 10));
+      movingPoint.setPosition(Math.max(Math.min(me.x, shell.getBounds().width - 25), 10), 
+                              Math.max(Math.min(me.y, shell.getBounds().height - 45), 10));
       
       shell.redraw();
     }
@@ -283,10 +327,15 @@ public class AmbushGraph implements DragDetectListener, MouseListener, MouseMove
     int pos = spacePerRegion / 2;
     pos += (region - 1) * spacePerRegion;
     int softness = RANDOM.nextInt(GRID_SOFTNESS);
-    if (RANDOM.nextBoolean()) {
+    if (pos < DISTANCE_FROM_EDGE || (pos < maxDimension - DISTANCE_FROM_EDGE && RANDOM.nextBoolean())) {
       pos += softness;
     } else {
       pos -= softness;
+    }
+    if (pos < DISTANCE_FROM_EDGE) {
+      pos = DISTANCE_FROM_EDGE;
+    } else if (pos > maxDimension - DISTANCE_FROM_EDGE) {
+      pos = maxDimension - DISTANCE_FROM_EDGE;
     }
     return pos;
   }
@@ -294,15 +343,20 @@ public class AmbushGraph implements DragDetectListener, MouseListener, MouseMove
   private static class GuiPoint {
     private final Color color;
     private final Map<Integer, Integer> xRegionCountMap;
+    private final int xSize;
+    private final int ySize;
     private int xRegion;
     private int yRegion;
     private boolean coordiantesSet;
     private int x;
     private int y;
     
-    public GuiPoint(Color color, Map<Integer, Integer> xRegionCountMap, int xRegion, int yRegion) {
+    public GuiPoint(Color color, Map<Integer, Integer> xRegionCountMap, 
+                    int xSize, int ySize, int xRegion, int yRegion) {
       this.color = color;
       this.xRegionCountMap = xRegionCountMap;
+      this.xSize = xSize;
+      this.ySize = ySize;
       this.xRegion = xRegion;
       this.yRegion = yRegion;
     }
@@ -310,13 +364,18 @@ public class AmbushGraph implements DragDetectListener, MouseListener, MouseMove
     private void ensureCoordinatesSet() {
       if (! coordiantesSet) {
         coordiantesSet = true;
-        x = getSoftGridPoint(xRegion, xRegionCountMap.size(), X_SIZE);
+        if (xRegion == 1) {
+          x = DISTANCE_FROM_EDGE;
+        } else {
+          x = getSoftGridPoint(xRegion, xRegionCountMap.size(), xSize);
+        }
+        // TODO - this is not working for large maps like I expected it to
         int totalY = xRegionCountMap.get(xRegion);
         if (totalY < yRegion) {
           totalY = yRegion;
           xRegionCountMap.put(xRegion, yRegion);
         }
-        y = getSoftGridPoint(yRegion, totalY, Y_SIZE);
+        y = getSoftGridPoint(yRegion, totalY, ySize);
       }
     }
     
