@@ -74,6 +74,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
    * 
    * @param sequentialSteps Sequential steps to add to this builder
    */
+  // TODO - what about previous chain items from the current step provided, this only gets future steps
   @Override
   public void addSteps(SequentialScriptBuilder sequentialSteps) {
     verifyValid();
@@ -92,6 +93,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
    * 
    * @param parallelSteps Parallel steps to add to this builder
    */
+  // TODO - what about previous chain items from the current step provided, this only gets future steps
   @Override
   public void addSteps(ParallelScriptBuilder parallelSteps) {
     maybeUpdatedMaximumThreads(parallelSteps.getNeededThreadCount() + 1);
@@ -155,6 +157,11 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
         result.addItem(it.next().makeCopy());
       }
       return result;
+    }
+
+    @Override
+    public ChildItems getChildItems() {
+      return new ChildItemContainer(steps, true);
     }
   }
 }

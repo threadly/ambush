@@ -265,7 +265,7 @@ public abstract class ScriptFactory {
    * 
    * @author jent - Mike Jensen
    */
-  public static class TestParameterException extends RuntimeException {
+  protected static class TestParameterException extends RuntimeException {
     private static final long serialVersionUID = -1913265153770464976L;
 
     public TestParameterException() {

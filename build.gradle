@@ -1,7 +1,4 @@
-apply from: "build.shared"
-
-
-
+apply from: 'build.shared'
 
 jar {
   from configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }

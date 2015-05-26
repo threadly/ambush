@@ -2,7 +2,6 @@ package org.threadly.load;
 
 import java.util.Collection;
 import java.util.Iterator;
-
 import org.threadly.concurrent.future.SettableListenableFuture;
 import org.threadly.load.ExecutableScript.ExecutionItem;
 import org.threadly.load.SequentialScriptBuilder.SequentialStep;
@@ -103,11 +102,12 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
    * 
    * @param sequentialSteps Sequential steps to add to this builder
    */
+  // TODO - what about previous chain items from the current step provided, this only gets future steps
   @Override
   public void addSteps(SequentialScriptBuilder sequentialSteps) {
     verifyValid();
     incrementThreads(sequentialSteps.getNeededThreadCount());
-    currentStep.addItem(new SequentialTestWrapper(sequentialSteps));
+    currentStep.addItem(new SequentialScriptWrapper(sequentialSteps));
   }
   
   /**
@@ -117,6 +117,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
    * 
    * @param parallelSteps Parallel steps to add to this builder
    */
+  // TODO - what about previous chain items from the current step provided, this only gets future steps
   @Override
   public void addSteps(ParallelScriptBuilder parallelSteps) {
     verifyValid();
@@ -155,17 +156,17 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
    * 
    * @author jent - Mike Jensen
    */
-  private static class SequentialTestWrapper implements ExecutionItem {
+  private static class SequentialScriptWrapper implements ExecutionItem {
     private final SequentialStep sequentialStep;
     private final Collection<? extends SettableListenableFuture<StepResult>> futures;
     
-    public SequentialTestWrapper(SequentialScriptBuilder sequentialScript) {
+    public SequentialScriptWrapper(SequentialScriptBuilder sequentialScript) {
       sequentialScript.verifyValid();
       this.sequentialStep = sequentialScript.currentStep;
       futures = sequentialStep.getFutures();
     }
     
-    private SequentialTestWrapper(SequentialStep sequentialStep) {
+    private SequentialScriptWrapper(SequentialStep sequentialStep) {
       this.sequentialStep = sequentialStep;
       futures = sequentialStep.getFutures();
     }
@@ -188,7 +189,12 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
 
     @Override
     public ExecutionItem makeCopy() {
-      return new SequentialTestWrapper(sequentialStep.makeCopy());
+      return new SequentialScriptWrapper(sequentialStep.makeCopy());
+    }
+
+    @Override
+    public ChildItems getChildItems() {
+      return new ChildItemContainer(sequentialStep.steps, true);
     }
   }
   
@@ -215,6 +221,11 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
         result.addItem(it.next().makeCopy());
       }
       return result;
+    }
+
+    @Override
+    public ChildItems getChildItems() {
+      return new ChildItemContainer(steps, false);
     }
   }
 }

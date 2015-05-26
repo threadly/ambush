@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.threadly.concurrent.future.ListenableFuture;
 import org.threadly.concurrent.future.SettableListenableFuture;
 import org.threadly.load.ExecutableScript.ExecutionItem;
+import org.threadly.load.ExecutableScript.ExecutionItem.ChildItems;
 import org.threadly.util.Clock;
 
 /**
@@ -173,6 +174,45 @@ public abstract class AbstractScriptBuilder {
   }
   
   /**
+   * <p>A simple implementation of {@link ChildItems} which takes in a list of items that it is 
+   * holding.</p>
+   * 
+   * @author jent - Mike Jensen
+   */
+  protected static class ChildItemContainer implements ChildItems {
+    private final List<ExecutionItem> items;
+    private final boolean runSequentially;
+    
+    protected ChildItemContainer() {
+      this(null, true);
+    }
+    
+    protected ChildItemContainer(List<ExecutionItem> items, boolean runSequentially) {
+      this.items = items;
+      this.runSequentially = runSequentially;
+    }
+
+    @Override
+    public boolean itemsRunSequential() {
+      return runSequentially;
+    }
+
+    @Override
+    public boolean hasChildren() {
+      return items != null;
+    }
+
+    @Override
+    public Iterator<ExecutionItem> iterator() {
+      if (items == null) {
+        return Collections.<ExecutionItem>emptyList().iterator();
+      } else {
+        return Collections.unmodifiableList(items).iterator();
+      }
+    }
+  }
+  
+  /**
    * <p>Test step which will report the current running test progress.</p>
    * 
    * @author jent - Mike Jensen
@@ -212,6 +252,16 @@ public abstract class AbstractScriptBuilder {
       // this does not need a copy
       return this;
     }
+
+    @Override
+    public ChildItems getChildItems() {
+      return new ChildItemContainer();
+    }
+
+    @Override
+    public String toString() {
+      return ProgressScriptStep.class.getSimpleName();
+    }
   }
   
   /**
@@ -249,6 +299,11 @@ public abstract class AbstractScriptBuilder {
         it.next().runChainItem(assistant);
       }
     }
+    
+    @Override
+    public String toString() {
+      return steps.toString();
+    }
   }
   
   /**
@@ -268,6 +323,16 @@ public abstract class AbstractScriptBuilder {
     public Collection<SettableListenableFuture<StepResult>> getFutures() {
       SettableListenableFuture<StepResult> slf = scriptStepRunner;
       return Collections.singletonList(slf);
+    }
+
+    @Override
+    public ChildItems getChildItems() {
+      return new ChildItemContainer();
+    }
+    
+    @Override
+    public String toString() {
+      return scriptStepRunner.scriptStep.getIdentifier();
     }
   }
   
@@ -306,7 +371,7 @@ public abstract class AbstractScriptBuilder {
     
     @Override
     public String toString() {
-      return "StepRunner-" + scriptStep.getIdentifier() + "-" + Integer.toHexString(System.identityHashCode(this));
+      return scriptStep.getIdentifier();
     }
   }
 }
