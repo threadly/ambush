@@ -1,7 +1,6 @@
 package org.threadly.load;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import org.threadly.concurrent.future.SettableListenableFuture;
@@ -33,9 +32,20 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
 
   @Override
   protected void finalizeStep() {
-    if (! currentStep.steps.isEmpty()) {
+    if (currentStep.getStepCount() > 0) {
       stepRunners.add(currentStep);
     }
+  }
+  
+  @Override
+  public ParallelScriptBuilder makeCopy() {
+    ParallelScriptBuilder result = new ParallelScriptBuilder();
+    
+    for (ExecutionItem item : currentStep.getSteps()) {
+      result.addStep(item.makeCopy());
+    }
+    
+    return result;
   }
 
   /**
@@ -102,12 +112,19 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
    * though those steps may run in parallel with other steps provided to this builder, those 10 
    * steps will still run one after another.
    * 
+   * The provided builder can not be modified after being provided.  It also can not be provided 
+   * as steps again.  If needing to provide again, please use {@link #makeCopy()}.
+   * 
    * @param sequentialSteps Sequential steps to add to this builder
    */
   // TODO - what about previous chain items from the current step provided, this only gets future steps
   @Override
   public void addSteps(SequentialScriptBuilder sequentialSteps) {
     verifyValid();
+    sequentialSteps.replaced();
+    if (sequentialSteps.currentStep.getStepCount() == 0) {
+      return;
+    }
     incrementThreads(sequentialSteps.getNeededThreadCount());
     currentStep.addItem(new SequentialScriptWrapper(sequentialSteps));
   }
@@ -117,16 +134,22 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
    * will be maintained.  These parallel steps will be executed in parallel with all other steps 
    * provided to this builder.
    * 
+   * The provided builder can not be modified after being provided.  It also can not be provided 
+   * as steps again.  If needing to provide again, please use {@link #makeCopy()}.
+   * 
    * @param parallelSteps Parallel steps to add to this builder
    */
   // TODO - what about previous chain items from the current step provided, this only gets future steps
   @Override
   public void addSteps(ParallelScriptBuilder parallelSteps) {
     verifyValid();
+    parallelSteps.replaced();
+    if (parallelSteps.currentStep.getStepCount() == 0) {
+      return;
+    }
     incrementThreads(parallelSteps.getNeededThreadCount());
-    Iterator<ExecutionItem> it = parallelSteps.currentStep.steps.iterator();
-    while (it.hasNext()) {
-      currentStep.addItem(it.next());
+    for (ExecutionItem step : parallelSteps.currentStep.getSteps()) {
+      currentStep.addItem(step);
     }
   }
   
@@ -199,12 +222,17 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
 
     @Override
     public ExecutionItem makeCopy() {
-      return new SequentialScriptWrapper(sequentialStep.makeCopy());
+      SequentialStep ss = sequentialStep.makeCopy();
+      if (ss == null) {
+        return null;
+      } else {
+        return new SequentialScriptWrapper(ss);
+      }
     }
 
     @Override
     public ChildItems getChildItems() {
-      return new ChildItemContainer(sequentialStep.steps, true);
+      return new ChildItemContainer(sequentialStep.getSteps(), true);
     }
   }
   
@@ -217,25 +245,26 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
   protected static class ParallelStep extends StepCollectionRunner {
     @Override
     public void runChainItem(ExecutionAssistant assistant) {
-      Iterator<ExecutionItem> it = steps.iterator();
-      while (it.hasNext()) {
-        it.next().runChainItem(assistant);
+      for (ExecutionItem step : getSteps()) {
+        step.runChainItem(assistant);
       }
     }
 
     @Override
     public ParallelStep makeCopy() {
       ParallelStep result = new ParallelStep();
-      Iterator<ExecutionItem> it = steps.iterator();
-      while (it.hasNext()) {
-        result.addItem(it.next().makeCopy());
+      for (ExecutionItem step : getSteps()) {
+        ExecutionItem ei = step.makeCopy();
+        if (ei != null) {
+          result.addItem(ei);
+        }
       }
       return result;
     }
 
     @Override
     public ChildItems getChildItems() {
-      return new ChildItemContainer(steps, false);
+      return new ChildItemContainer(getSteps(), false);
     }
   }
 }

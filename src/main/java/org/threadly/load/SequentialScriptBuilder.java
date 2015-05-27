@@ -1,7 +1,5 @@
 package org.threadly.load;
 
-import java.util.Iterator;
-
 import org.threadly.concurrent.future.FutureUtils;
 import org.threadly.load.ExecutableScript.ExecutionItem;
 
@@ -29,9 +27,20 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
 
   @Override
   protected void finalizeStep() {
-    if (! currentStep.steps.isEmpty()) {
+    if (currentStep.getStepCount() > 0) {
       stepRunners.add(currentStep);
     }
+  }
+  
+  @Override
+  public SequentialScriptBuilder makeCopy() {
+    SequentialScriptBuilder result = new SequentialScriptBuilder();
+    
+    for (ExecutionItem item : currentStep.getSteps()) {
+      result.addStep(item.makeCopy());
+    }
+    
+    return result;
   }
 
   /**
@@ -72,16 +81,22 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
    * previously added steps have completed.  The execution graph of the provided steps will be 
    * maintained.  Future steps wont be executed till all provided steps are complete.
    * 
+   * The provided builder can not be modified after being provided.  It also can not be provided 
+   * as steps again.  If needing to provide again, please use {@link #makeCopy()}.
+   * 
    * @param sequentialSteps Sequential steps to add to this builder
    */
   // TODO - what about previous chain items from the current step provided, this only gets future steps
   @Override
   public void addSteps(SequentialScriptBuilder sequentialSteps) {
     verifyValid();
+    sequentialSteps.replaced();
+    if (sequentialSteps.currentStep.getStepCount() == 0) {
+      return;
+    }
     maybeUpdatedMaximumThreads(sequentialSteps.getNeededThreadCount() + 1);
-    Iterator<ExecutionItem> it = sequentialSteps.currentStep.steps.iterator();
-    while (it.hasNext()) {
-      currentStep.addItem(it.next());
+    for (ExecutionItem step : sequentialSteps.currentStep.getSteps()) {
+      currentStep.addItem(step);
     }
   }
   
@@ -91,11 +106,19 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
    * future steps added to this builder will not be executed till this provided builder has 
    * finished running.
    * 
+   * The provided builder can not be modified after being provided.  It also can not be provided 
+   * as steps again.  If needing to provide again, please use {@link #makeCopy()}.
+   * 
    * @param parallelSteps Parallel steps to add to this builder
    */
   // TODO - what about previous chain items from the current step provided, this only gets future steps
   @Override
   public void addSteps(ParallelScriptBuilder parallelSteps) {
+    verifyValid();
+    parallelSteps.replaced();
+    if (parallelSteps.currentStep.getStepCount() == 0) {
+      return;
+    }
     maybeUpdatedMaximumThreads(parallelSteps.getNeededThreadCount() + 1);
     addStep(parallelSteps.currentStep);
   }
@@ -132,9 +155,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
   protected static class SequentialStep extends StepCollectionRunner {
     @Override
     public void runChainItem(ExecutionAssistant assistant) {
-      Iterator<ExecutionItem> it = steps.iterator();
-      while (it.hasNext()) {
-        ExecutionItem chainItem = it.next();
+      for (ExecutionItem chainItem : getSteps()) {
         chainItem.runChainItem(assistant);
         // this call will block till execution is done, thus making us wait to run the next chain item
         try {
@@ -152,16 +173,18 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
     @Override
     public SequentialStep makeCopy() {
       SequentialStep result = new SequentialStep();
-      Iterator<ExecutionItem> it = steps.iterator();
-      while (it.hasNext()) {
-        result.addItem(it.next().makeCopy());
+      for (ExecutionItem chainItem : getSteps()) {
+        ExecutionItem copy = chainItem.makeCopy();
+        if (copy != null) {
+          result.addItem(copy);
+        }
       }
       return result;
     }
 
     @Override
     public ChildItems getChildItems() {
-      return new ChildItemContainer(steps, true);
+      return new ChildItemContainer(getSteps(), true);
     }
   }
 }

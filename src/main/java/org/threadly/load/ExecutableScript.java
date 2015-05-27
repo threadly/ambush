@@ -53,10 +53,14 @@ public class ExecutableScript {
    */
   // TODO - remove?
   public List<ExecutionItem> makeItemsCopy() {
-    List<ExecutionItem> result = new ArrayList<ExecutionItem>(steps.length);
+    ArrayList<ExecutionItem> result = new ArrayList<ExecutionItem>(steps.length);
     for (ExecutionItem step : steps) {
-      result.add(step.makeCopy());
+      ExecutionItem copy = step.makeCopy();
+      if (copy != null) {
+        result.add(copy);
+      }
     }
+    result.trimToSize();
     return result;
   }
   
@@ -197,7 +201,6 @@ public class ExecutableScript {
      * 
      * @return A copy of the test item
      */
-    // TODO - remove?
     public ExecutionItem makeCopy();
     
     /**

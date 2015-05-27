@@ -1,6 +1,7 @@
 package org.threadly.load;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -130,6 +131,15 @@ public abstract class AbstractScriptBuilder {
     return neededThreadCount;
   }
   
+  /**
+   * Make a copy of the script chain.  This is necessary if you want to add the chain multiple 
+   * times to another chain.  The returned chain will execute the same script step instances (so 
+   * if added to a parallel builder make sure the script steps are thread safe).
+   * 
+   * @return A copy builder
+   */
+  public abstract AbstractScriptBuilder makeCopy();
+  
   protected void maybeUpdatedMaximumThreads(int currentValue) {
     if (neededThreadCount < currentValue) {
       neededThreadCount = currentValue;
@@ -180,14 +190,14 @@ public abstract class AbstractScriptBuilder {
    * @author jent - Mike Jensen
    */
   protected static class ChildItemContainer implements ChildItems {
-    private final List<ExecutionItem> items;
+    private final ExecutionItem[] items;
     private final boolean runSequentially;
     
     protected ChildItemContainer() {
       this(null, true);
     }
     
-    protected ChildItemContainer(List<ExecutionItem> items, boolean runSequentially) {
+    protected ChildItemContainer(ExecutionItem[] items, boolean runSequentially) {
       this.items = items;
       this.runSequentially = runSequentially;
     }
@@ -207,7 +217,7 @@ public abstract class AbstractScriptBuilder {
       if (items == null) {
         return Collections.<ExecutionItem>emptyList().iterator();
       } else {
-        return Collections.unmodifiableList(items).iterator();
+        return Arrays.asList(items).iterator();
       }
     }
   }
@@ -254,8 +264,7 @@ public abstract class AbstractScriptBuilder {
 
     @Override
     public ExecutionItem makeCopy() {
-      // this does not need a copy
-      return this;
+      return null;
     }
 
     @Override
@@ -276,28 +285,36 @@ public abstract class AbstractScriptBuilder {
    * @author jent - Mike Jensen
    */
   protected abstract static class StepCollectionRunner implements ExecutionItem {
-    // TODO - move from arrayLists to arrays to save memory
-    protected final ArrayList<ExecutionItem> steps;
     private final ArrayList<SettableListenableFuture<StepResult>> futures;
+    private ExecutionItem[] steps;
     
     public StepCollectionRunner() {
-      steps = new ArrayList<ExecutionItem>();
+      steps = new ExecutionItem[0];
       futures = new ArrayList<SettableListenableFuture<StepResult>>();
+    }
+
+    public int getStepCount() {
+      return steps.length;
+    }
+    
+    public ExecutionItem[] getSteps() {
+      return steps;
     }
 
     @Override
     public void prepareForRun() {
-      steps.trimToSize();
       futures.trimToSize();
     }
     
-    // TODO - remove?
     @Override
     public abstract StepCollectionRunner makeCopy();
     
     public void addItem(ExecutionItem item) {
       futures.addAll(item.getFutures());
-      steps.add(item);
+      ExecutionItem[] newSteps = new ExecutionItem[steps.length + 1];
+      System.arraycopy(steps, 0, newSteps, 0, steps.length);
+      newSteps[steps.length] = item;
+      steps = newSteps;
     }
     
     @Override
@@ -307,15 +324,14 @@ public abstract class AbstractScriptBuilder {
     
     @Override
     public void runChainItem(ExecutionAssistant assistant) {
-      Iterator<ExecutionItem> it = steps.iterator();
-      while (it.hasNext()) {
-        it.next().runChainItem(assistant);
+      for (ExecutionItem step : steps) {
+        step.runChainItem(assistant);
       }
     }
     
     @Override
     public String toString() {
-      return steps.toString();
+      return Arrays.toString(steps);
     }
   }
   
