@@ -1,7 +1,10 @@
 package org.threadly.load;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.threadly.concurrent.future.ListenableFuture;
@@ -77,20 +80,54 @@ public class ScriptRunner extends AbstractScriptFactoryInitializer {
     List<StepResult> fails = StepResultCollectionUtils.getAllFailedResults(futures);
     long end = Clock.accurateForwardProgressingMillis();
     if (fails.isEmpty()) {
-      System.out.println("All tests passed after running for " + ((end - start) / 1000) + " seconds");
-      double averageRunMillis = StepResultCollectionUtils.getAverageRuntime(futures, TimeUnit.MILLISECONDS);
-      System.out.println("Average time spent per test step: " + averageRunMillis + " milliseconds");
-      StepResult longestStep = StepResultCollectionUtils.getLongestRuntimeStep(futures);
-      System.out.println("Longest running step: " + longestStep.getDescription() + 
-                           ", ran for: " + longestStep.getRunTime(TimeUnit.MILLISECONDS) + " milliseconds");
+      System.out.println("All steps passed!");
     } else {
-      System.out.println(fails.size() + " TEST FAILED!!");
-      Iterator<StepResult> it = fails.iterator();
-      while (it.hasNext()) {
-        StepResult tr = it.next();
-        System.out.println("Test " + tr.getDescription() + " failed for cause:");
-        tr.getError().printStackTrace();
+      Map<String, List<StepResult>> failureCountMap = new HashMap<String, List<StepResult>>();
+      System.out.println(fails.size() + " STEPS FAILED!!");
+      System.out.println();
+      {
+        Iterator<StepResult> it = fails.iterator();
+        while (it.hasNext()) {
+          StepResult tr = it.next();
+          String errorMsg = ExceptionUtils.stackToString(tr.getError());
+          List<StepResult> currentSteps = failureCountMap.get(errorMsg);
+          if (currentSteps == null) {
+            currentSteps = new ArrayList<StepResult>(1);
+            failureCountMap.put(errorMsg, currentSteps);
+          }
+          currentSteps.add(tr);
+        }
+      }
+      {
+        Iterator<Map.Entry<String, List<StepResult>>> it = failureCountMap.entrySet().iterator();
+        while (it.hasNext()) {
+          Map.Entry<String, List<StepResult>> e = it.next();
+          if (e.getValue().size() > 1) {
+            List<String> descriptions = new ArrayList<String>(e.getValue().size());
+            for (StepResult sr : e.getValue()) {
+              if (! descriptions.contains(sr.getDescription())) {
+                descriptions.add(sr.getDescription());
+              }
+            }
+            System.out.println("Error occured " + e.getValue().size() + " times for the following steps:");
+            for (String s : descriptions) {
+              System.out.println('\t' + s);
+            }
+            System.out.println("All share failure cause:");
+          } else {
+            System.out.println("Step " + e.getValue().get(0).getDescription() + " failed due to:");
+          }
+          System.out.println(e.getKey());
+          System.out.println();
+        }
       }
     }
+    System.out.println("Totals steps executed: " + futures.size());
+    System.out.println("Test execution time: " + ((end - start) / 1000) + " seconds");
+    double averageRunMillis = StepResultCollectionUtils.getAverageRuntime(futures, TimeUnit.MILLISECONDS);
+    System.out.println("Average time spent per step: " + averageRunMillis + " milliseconds");
+    StepResult longestStep = StepResultCollectionUtils.getLongestRuntimeStep(futures);
+    System.out.println("Longest running step: " + longestStep.getDescription() + 
+                         ", ran for: " + longestStep.getRunTime(TimeUnit.MILLISECONDS) + " milliseconds");
   }
 }
