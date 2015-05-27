@@ -186,7 +186,6 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
     private final List<? extends SettableListenableFuture<StepResult>> futures;
     
     public SequentialScriptWrapper(SequentialScriptBuilder sequentialScript) {
-      sequentialScript.verifyValid();
       this.sequentialStep = sequentialScript.currentStep;
       futures = sequentialStep.getFutures();
     }
