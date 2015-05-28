@@ -15,12 +15,6 @@ import org.threadly.util.StringUtils;
 public abstract class AbstractScriptStep implements ScriptStepInterface {
   private static final Map<String, String> PARAMS = new ConcurrentHashMap<String, String>();
   
-  private final String identifier;
-  
-  protected AbstractScriptStep(String identifier) {
-    this.identifier = identifier;
-  }
-  
   /**
    * Sets a global parameter.  This parameter will be shared among tests.  If tests are setting 
    * this concurrently it is important to know that only the last set will be maintained.
@@ -32,7 +26,7 @@ public abstract class AbstractScriptStep implements ScriptStepInterface {
    * @param key Key used for retrieval later
    * @param value Value to be set for the given key
    */
-  public void setGlobalParam(String key, String value) {
+  public static void setGlobalParam(String key, String value) {
     PARAMS.put(key, value);
   }
   
@@ -44,8 +38,14 @@ public abstract class AbstractScriptStep implements ScriptStepInterface {
    * @param key Key to use for parameter lookup
    * @return Returns the set parameter, will never return {@code null}, but an empty string is possible
    */
-  public String getGlobalParam(String key) {
+  public static String getGlobalParam(String key) {
     return StringUtils.makeNonNull(PARAMS.get(key));
+  }
+  
+  private final String identifier;
+  
+  protected AbstractScriptStep(String identifier) {
+    this.identifier = identifier;
   }
   
   @Override
