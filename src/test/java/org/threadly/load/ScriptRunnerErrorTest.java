@@ -25,10 +25,24 @@ public class ScriptRunnerErrorTest {
                  .usageAndExitCalled);
   }
   
+  @Test
+  public void classHasNoEmptyConstructorTest() {
+    assertTrue(new TestScriptRunner(new String[]{NoEmptyArgConstructorFactory.class.getName()})
+                 .usageAndExitCalled);
+  }
+  
   @SuppressWarnings("unused")
   @Test (expected = ScriptParameterException.class)
   public void errorDurringScriptGenerationTest() {
     new TestScriptRunner(new String[]{TestScriptFactory.class.getName()});
+  }
+  
+  @Test
+  public void runScriptStepFailureTest() throws InterruptedException {
+    TestScriptRunner runner = new TestScriptRunner(new String[]{ErrorScriptFactory.class.getName()});
+    runner.runScript();
+    // no exception thrown
+    assertFalse(runner.usageAndExitCalled);
   }
   
   private static class TestScriptRunner extends ScriptRunner {
@@ -41,6 +55,37 @@ public class ScriptRunnerErrorTest {
     @Override
     protected void usageAndExit(String runningScript) {
       usageAndExitCalled = true;
+    }
+  }
+  
+  protected static class NoEmptyArgConstructorFactory extends ScriptFactory {
+    public NoEmptyArgConstructorFactory(@SuppressWarnings("unused") String argument) {
+      // nothing needed to happen here
+    }
+
+    @Override
+    public ExecutableScript buildScript() {
+      throw new UnsupportedOperationException();
+    }
+  }
+  
+  protected static class ErrorScriptFactory extends ScriptFactory {
+    @Override
+    public ExecutableScript buildScript() {
+      SequentialScriptBuilder builder = new SequentialScriptBuilder();
+      builder.addStep(new ScriptStepInterface() {
+        @Override
+        public String getIdentifier() {
+          return "fail step";
+        }
+
+        @Override
+        public void runStep() throws Exception {
+          throw new Exception("step failure");
+        }
+      });
+      
+      return builder.build();
     }
   }
 }

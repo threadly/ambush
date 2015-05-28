@@ -2,6 +2,8 @@ package org.threadly.load;
 
 import static org.junit.Assert.*;
 
+import java.util.Collections;
+import java.util.Map;
 import java.util.Properties;
 
 import org.junit.After;
@@ -38,7 +40,7 @@ public class ScriptFactoryTest {
   
   @Test
   public void getPossibleParametersTest() {
-    assertEquals(0, factory.getPossibleParameters().size());
+    assertEquals(1, factory.getPossibleParameters().size());
   }
   
   @Test
@@ -265,6 +267,12 @@ public class ScriptFactoryTest {
     @Override
     public ExecutableScript buildScript() {
       throw new ScriptParameterException("test failure");
+    }
+    
+    @Override
+    public Map<String, String> getPossibleParameters() {
+      assertTrue(super.getPossibleParameters().isEmpty());
+      return Collections.singletonMap("foo", "bar");
     }
   }
 }

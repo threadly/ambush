@@ -190,8 +190,8 @@ public abstract class AbstractScriptBuilder {
    * @author jent - Mike Jensen
    */
   protected static class ChildItemContainer implements ChildItems {
-    private final ExecutionItem[] items;
-    private final boolean runSequentially;
+    protected final ExecutionItem[] items;
+    protected final boolean runSequentially;
     
     protected ChildItemContainer() {
       this(null, true);
@@ -334,18 +334,23 @@ public abstract class AbstractScriptBuilder {
       return Arrays.toString(steps);
     }
   }
-  
+
   /**
-   * <p>The basic implementation for running a single test step.  The actual execution will depend 
-   * on the type of builder.</p>
+   * <p>Implementation for executing a {@link ScriptStepInterface} instance.  This class also 
+   * represents the future for the test step execution.  If executed it is guaranteed to provide a 
+   * {@link StepResult} (with or without error).</p>
    * 
    * @author jent - Mike Jensen
    */
-  protected abstract static class AbstractScriptStepWrapper implements ExecutionItem {
-    public final ScriptStepRunner scriptStepRunner;
+  protected static class ScriptStepRunner extends SettableListenableFuture<StepResult>
+                                          implements ExecutionItem {
+    protected final ScriptStepInterface scriptStep;
+    protected final boolean runAsync;
     
-    public AbstractScriptStepWrapper(ScriptStepInterface scriptStep) {
-      scriptStepRunner = new ScriptStepRunner(scriptStep);
+    public ScriptStepRunner(ScriptStepInterface scriptStep, boolean runAsync) {
+      super(false);
+      this.scriptStep = scriptStep;
+      this.runAsync = runAsync;
     }
 
     @Override
@@ -354,40 +359,20 @@ public abstract class AbstractScriptBuilder {
     }
 
     @Override
-    public List<SettableListenableFuture<StepResult>> getFutures() {
-      SettableListenableFuture<StepResult> slf = scriptStepRunner;
-      return Collections.singletonList(slf);
-    }
-
-    @Override
-    public ChildItems getChildItems() {
-      return new ChildItemContainer();
-    }
-    
-    @Override
-    public String toString() {
-      return scriptStepRunner.toString();
-    }
-  }
-  
-  /**
-   * <p>{@link Runnable} implementation for how a {@link ScriptStepInterface} is executed.  This 
-   * class also represents the future for the test step execution.  If executed it is guaranteed 
-   * to provide a {@link StepResult} (with or without error).</p>
-   * 
-   * @author jent - Mike Jensen
-   */
-  protected static class ScriptStepRunner extends SettableListenableFuture<StepResult>
-                                          implements Runnable {
-    protected final ScriptStepInterface scriptStep;
-    
-    protected ScriptStepRunner(ScriptStepInterface scriptStep) {
-      super(false);
-      this.scriptStep = scriptStep;
+    public void runChainItem(ExecutionAssistant assistant) {
+      if (runAsync) {
+        assistant.executeAsyncIfStillRunning(new Runnable() {
+          @Override
+          public void run() {
+            runStep();
+          }
+        });
+      } else {
+        runStep();
+      }
     }
     
-    @Override
-    public void run() {
+    protected void runStep() {
       setRunningThread(Thread.currentThread());
       
       long startNanos = Clock.systemNanoTime();
@@ -401,6 +386,22 @@ public abstract class AbstractScriptBuilder {
         result = new StepResult(scriptStep.getIdentifier(), endNanos - startNanos, t);
       }
       setResult(result);
+    }
+
+    @Override
+    public ScriptStepRunner makeCopy() {
+      return new ScriptStepRunner(scriptStep, runAsync);
+    }
+
+    @Override
+    public List<SettableListenableFuture<StepResult>> getFutures() {
+      SettableListenableFuture<StepResult> slf = this;
+      return Collections.singletonList(slf);
+    }
+
+    @Override
+    public ChildItems getChildItems() {
+      return new ChildItemContainer();
     }
     
     @Override

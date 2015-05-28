@@ -67,7 +67,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
    */
   @Override
   public void addStep(ScriptStepInterface step) {
-    addStep(new ScriptStepWrapper(step));
+    addStep(new ScriptStepRunner(step, false));
   }
   
   @Override
@@ -121,29 +121,6 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
     }
     maybeUpdatedMaximumThreads(parallelSteps.getNeededThreadCount() + 1);
     addStep(parallelSteps.currentStep);
-  }
-  
-  /**
-   * <p>Implementation where the test will be ran in-thread (rather than farmed out to the 
-   * executor).  This will result in {@link #runChainItem(Executor)} to block till the test step 
-   * has completed.</p>
-   * 
-   * @author jent - Mike Jensen
-   */
-  private static class ScriptStepWrapper extends AbstractScriptStepWrapper {
-    public ScriptStepWrapper(ScriptStepInterface scriptStep) {
-      super(scriptStep);
-    }
-    
-    @Override
-    public void runChainItem(ExecutionAssistant coordinator) {
-      scriptStepRunner.run();
-    }
-
-    @Override
-    public ExecutionItem makeCopy() {
-      return new ScriptStepWrapper(scriptStepRunner.scriptStep);
-    }
   }
   
   /**

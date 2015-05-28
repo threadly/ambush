@@ -1,6 +1,5 @@
 package org.threadly.load;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.threadly.concurrent.future.SettableListenableFuture;
@@ -96,7 +95,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
     verifyValid();
     incrementThreads(times);
     for (int i = 0; i < times; i++) {
-      currentStep.addItem(new ScriptStepWrapper(step));
+      currentStep.addItem(new ScriptStepRunner(step, true));
     }
   }
   
@@ -154,28 +153,6 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
   }
   
   /**
-   * <p>Wrapper for a test step that will execute on an {#link Executor} in parallel to other 
-   * steps.</p>
-   * 
-   * @author jent - Mike Jensen
-   */
-  private static class ScriptStepWrapper extends AbstractScriptStepWrapper {
-    public ScriptStepWrapper(ScriptStepInterface scriptStep) {
-      super(scriptStep);
-    }
-    
-    @Override
-    public void runChainItem(ExecutionAssistant assistant) {
-      assistant.executeAsyncIfStillRunning(scriptStepRunner);
-    }
-
-    @Override
-    public ExecutionItem makeCopy() {
-      return new ScriptStepWrapper(scriptStepRunner.scriptStep);
-    }
-  }
-  
-  /**
    * <p>Implementation of {@link ExecutionItem} where multiple test steps will be executed in 
    * sequence, while other steps in this build can run concurrently at the same time.</p>
    * 
@@ -183,24 +160,18 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
    */
   private static class SequentialScriptWrapper implements ExecutionItem {
     private final SequentialStep sequentialStep;
-    private final List<? extends SettableListenableFuture<StepResult>> futures;
     
     public SequentialScriptWrapper(SequentialScriptBuilder sequentialScript) {
       this.sequentialStep = sequentialScript.currentStep;
-      futures = sequentialStep.getFutures();
     }
     
     private SequentialScriptWrapper(SequentialStep sequentialStep) {
       this.sequentialStep = sequentialStep;
-      futures = sequentialStep.getFutures();
     }
 
-    @SuppressWarnings("rawtypes")
     @Override
     public void prepareForRun() {
-      if (futures instanceof ArrayList) {
-        ((ArrayList)futures).trimToSize();
-      }
+      sequentialStep.prepareForRun();
     }
     
     @Override
@@ -216,7 +187,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
 
     @Override
     public List<? extends SettableListenableFuture<StepResult>> getFutures() {
-      return futures;
+      return sequentialStep.getFutures();
     }
 
     @Override

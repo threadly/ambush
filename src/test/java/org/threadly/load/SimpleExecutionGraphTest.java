@@ -147,6 +147,33 @@ public class SimpleExecutionGraphTest {
   }
   
   @Test
+  public void inSequenceSectionsOfParallelByAddingBuildersTest() throws InterruptedException {
+    final List<TestStep> parallelSteps1 = makeTestSteps(null, TEST_COMPLEXITY);
+    SequentialScriptBuilder sBuilder = new SequentialScriptBuilder();
+    ParallelScriptBuilder pBuilder1 = new ParallelScriptBuilder();
+    addSteps(parallelSteps1, pBuilder1);
+    ParallelScriptBuilder pBuilder2 = new ParallelScriptBuilder();
+    List<TestStep> parallelSteps2 = makeTestSteps(new Runnable() {
+      @Override
+      public void run() {
+        Iterator<TestStep> it = parallelSteps1.iterator();
+        while (it.hasNext()) {
+          assertEquals(1, it.next().getRunCount());
+        }
+      }
+    }, TEST_COMPLEXITY);
+    addSteps(parallelSteps2, pBuilder2);
+    
+    sBuilder.addSteps(pBuilder1);
+    sBuilder.addSteps(pBuilder2);
+    
+    List<? extends ListenableFuture<StepResult>> futures = sBuilder.build().startScript();
+    assertEquals(TEST_COMPLEXITY * 2, futures.size());
+    
+    FutureUtils.blockTillAllComplete(futures);
+  }
+  
+  @Test
   public void inSequenceSectionsOfParallelWithFailureTest() throws InterruptedException, ExecutionException {
     final List<TestStep> parallelSteps1 = makeTestSteps(null, TEST_COMPLEXITY);
     AbstractScriptBuilder builder = new ParallelScriptBuilder();

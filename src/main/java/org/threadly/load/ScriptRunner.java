@@ -74,7 +74,7 @@ public class ScriptRunner extends AbstractScriptFactoryInitializer {
     super(args);
   }
   
-  private void runScript() throws InterruptedException {
+  protected void runScript() throws InterruptedException {
     long start = Clock.accurateForwardProgressingMillis();
     List<ListenableFuture<StepResult>> futures = script.startScript();
     List<StepResult> fails = StepResultCollectionUtils.getAllFailedResults(futures);
