@@ -2,6 +2,7 @@ package org.threadly.load;
 
 import java.util.List;
 
+import org.threadly.concurrent.future.FutureUtils;
 import org.threadly.concurrent.future.SettableListenableFuture;
 import org.threadly.load.ExecutableScript.ExecutionItem;
 import org.threadly.load.SequentialScriptBuilder.SequentialStep;
@@ -211,8 +212,24 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
    * 
    * @author jent - Mike Jensen
    */
-  // TODO - can this be put into StepCollectionRunner
   protected static class ParallelStep extends StepCollectionRunner {
+    @Override
+    public void runChainItem(ExecutionAssistant assistant) {
+      for (ExecutionItem chainItem : getSteps()) {
+        chainItem.runChainItem(assistant);
+      }
+      // this call will block till execution is done, thus making us wait to run the next chain item
+      try {
+        if (StepResultCollectionUtils.getFailedResult(getFutures()) != null) {
+          FutureUtils.cancelIncompleteFutures(getFutures(), true);
+          return;
+        }
+      } catch (InterruptedException e) {
+        // let thread exit
+        return;
+      }
+    }
+    
     @Override
     public ParallelStep makeCopy() {
       ParallelStep result = new ParallelStep();

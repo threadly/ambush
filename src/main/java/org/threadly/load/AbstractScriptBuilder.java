@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.threadly.concurrent.future.FutureUtils;
 import org.threadly.concurrent.future.ListenableFuture;
 import org.threadly.concurrent.future.SettableListenableFuture;
 import org.threadly.load.ExecutableScript.ExecutionItem;
@@ -368,23 +367,6 @@ public abstract class AbstractScriptBuilder {
     @Override
     public List<? extends SettableListenableFuture<StepResult>> getFutures() {
       return futures;
-    }
-    
-    @Override
-    public void runChainItem(ExecutionAssistant assistant) {
-      for (ExecutionItem chainItem : steps) {
-        chainItem.runChainItem(assistant);
-        // this call will block till execution is done, thus making us wait to run the next chain item
-        try {
-          if (StepResultCollectionUtils.getFailedResult(chainItem.getFutures()) != null) {
-            FutureUtils.cancelIncompleteFutures(getFutures(), true);
-            return;
-          }
-        } catch (InterruptedException e) {
-          // let thread exit
-          return;
-        }
-      }
     }
 
     @Override

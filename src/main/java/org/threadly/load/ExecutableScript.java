@@ -202,9 +202,9 @@ public class ExecutableScript {
      * {@link ExecutionAssistant}, but returned futures from {@link #getFutures()} should not fully 
      * complete until the chain item completes.
      * 
-     * @param script {@link ExecutionAssistant} which is performing the execution
+     * @param assistant {@link ExecutionAssistant} which is performing the execution
      */
-    public void runChainItem(ExecutionAssistant script);
+    public void runChainItem(ExecutionAssistant assistant);
 
     /**
      * Returns the collection of futures which represent this test.  There should be one future 
