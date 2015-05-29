@@ -181,7 +181,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
         public void run() {
           sequentialStep.runChainItem(assistant);
         }
-      });
+      }, false);
       // no need to block this thread for these to run
     }
 
@@ -214,13 +214,6 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
   // TODO - can this be put into StepCollectionRunner
   protected static class ParallelStep extends StepCollectionRunner {
     @Override
-    public void runChainItem(ExecutionAssistant assistant) {
-      for (ExecutionItem step : getSteps()) {
-        step.runChainItem(assistant);
-      }
-    }
-
-    @Override
     public ParallelStep makeCopy() {
       ParallelStep result = new ParallelStep();
       for (ExecutionItem step : getSteps()) {
@@ -230,11 +223,6 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
         }
       }
       return result;
-    }
-
-    @Override
-    public ChildItems getChildItems() {
-      return new ChildItemContainer(getSteps(), false);
     }
   }
 }

@@ -5,13 +5,16 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.threadly.concurrent.future.FutureUtils;
 import org.threadly.concurrent.future.ListenableFuture;
 import org.threadly.concurrent.future.SettableListenableFuture;
 import org.threadly.load.ExecutableScript.ExecutionItem;
 import org.threadly.load.ExecutableScript.ExecutionItem.ChildItems;
 import org.threadly.util.Clock;
+import org.threadly.util.ExceptionUtils;
 
 /**
  * <p>Provides the shared implementation among all execution step builders.  This also defines the 
@@ -58,6 +61,23 @@ public abstract class AbstractScriptBuilder {
     SettableListenableFuture<Double> slf = new SettableListenableFuture<Double>(false);
     addStep(new ProgressScriptStep(slf));
     return slf;
+  }
+  
+  /**
+   * Sets a new limit for the script steps to be executed at.  This will only take place for steps 
+   * which execute AFTER this point in the script.  This is effectively adding a task at this 
+   * point in the script that will set an limit on how fast the steps can run.  If you want your 
+   * entire script to adher to this limit it must be done before any steps are added.  
+   * 
+   * This allows you to control request rates, allowing you at run time to adjust the rate at 
+   * which executions are occurring.  
+   * 
+   * Provide a value of zero to disable this and allow steps to execute as fast as possible.
+   * 
+   * @param stepsPerSecondLimit Steps per second allowed to execute
+   */
+  public void setMaxScriptStepRate(final int stepsPerSecondLimit) {
+    addStep(new RateAdjustmentStep(stepsPerSecondLimit));
   }
 
   /**
@@ -223,20 +243,38 @@ public abstract class AbstractScriptBuilder {
   }
   
   /**
+   * <p>{@link ExecutionItem} which changes the limit at which steps can be executed.</p>
+   * 
+   * @author jent - Mike Jensen
+   */
+  private static class RateAdjustmentStep extends GhostExecutionItem {
+    private final int newRateLimit;
+    
+    public RateAdjustmentStep(int newRateLimit) {
+      this.newRateLimit = newRateLimit;
+    }
+    
+    @Override
+    public void runChainItem(ExecutionAssistant assistant) {
+      assistant.setStepPerSecondLimit(newRateLimit);
+    }
+
+    @Override
+    public String toString() {
+      return RateAdjustmentStep.class.getSimpleName();
+    }
+  }
+  
+  /**
    * <p>Test step which will report the current running test progress.</p>
    * 
    * @author jent - Mike Jensen
    */
-  private static class ProgressScriptStep implements ExecutionItem {
+  private static class ProgressScriptStep extends GhostExecutionItem {
     private final SettableListenableFuture<Double> slf;
 
     public ProgressScriptStep(SettableListenableFuture<Double> slf) {
       this.slf = slf;
-    }
-
-    @Override
-    public void prepareForRun() {
-      // nothing to do here
     }
 
     @Override
@@ -258,6 +296,24 @@ public abstract class AbstractScriptBuilder {
     }
 
     @Override
+    public String toString() {
+      return ProgressScriptStep.class.getSimpleName();
+    }
+  }
+  
+  /**
+   * <p>Abstract implementation for any {@link ExecutionItem} which should not be ever seen to the 
+   * user.  Either by a future returned as a step, or copied into a new chain.</p>
+   * 
+   * @author jent - Mike Jensen
+   */
+  protected abstract static class GhostExecutionItem implements ExecutionItem {
+    @Override
+    public void prepareForRun() {
+      // nothing to do here
+    }
+    
+    @Override
     public List<? extends SettableListenableFuture<StepResult>> getFutures() {
       return Collections.emptyList();
     }
@@ -270,11 +326,6 @@ public abstract class AbstractScriptBuilder {
     @Override
     public ChildItems getChildItems() {
       return new ChildItemContainer();
-    }
-
-    @Override
-    public String toString() {
-      return ProgressScriptStep.class.getSimpleName();
     }
   }
   
@@ -306,9 +357,6 @@ public abstract class AbstractScriptBuilder {
       futures.trimToSize();
     }
     
-    @Override
-    public abstract StepCollectionRunner makeCopy();
-    
     public void addItem(ExecutionItem item) {
       futures.addAll(item.getFutures());
       ExecutionItem[] newSteps = new ExecutionItem[steps.length + 1];
@@ -324,9 +372,24 @@ public abstract class AbstractScriptBuilder {
     
     @Override
     public void runChainItem(ExecutionAssistant assistant) {
-      for (ExecutionItem step : steps) {
-        step.runChainItem(assistant);
+      for (ExecutionItem chainItem : steps) {
+        chainItem.runChainItem(assistant);
+        // this call will block till execution is done, thus making us wait to run the next chain item
+        try {
+          if (StepResultCollectionUtils.getFailedResult(chainItem.getFutures()) != null) {
+            FutureUtils.cancelIncompleteFutures(getFutures(), true);
+            return;
+          }
+        } catch (InterruptedException e) {
+          // let thread exit
+          return;
+        }
       }
+    }
+
+    @Override
+    public ChildItems getChildItems() {
+      return new ChildItemContainer(getSteps(), true);
     }
     
     @Override
@@ -360,15 +423,24 @@ public abstract class AbstractScriptBuilder {
 
     @Override
     public void runChainItem(ExecutionAssistant assistant) {
-      if (runAsync) {
-        assistant.executeAsyncIfStillRunning(new Runnable() {
-          @Override
-          public void run() {
-            runStep();
+      ListenableFuture<?> f = assistant.executeAsyncIfStillRunning(new Runnable() {
+        @Override
+        public void run() {
+          runStep();
+        }
+      }, true);
+      if (! runAsync) {
+        try {
+          f.get();
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        } catch (ExecutionException e) {
+          Throwable cause = e.getCause();
+          if (cause == null) {
+            cause = e;
           }
-        });
-      } else {
-        runStep();
+          throw ExceptionUtils.makeRuntime(cause);
+        }
       }
     }
     

@@ -7,9 +7,11 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.threadly.concurrent.PriorityScheduler;
+import org.threadly.concurrent.SubmitterExecutorInterface;
 import org.threadly.concurrent.future.FutureUtils;
 import org.threadly.concurrent.future.ListenableFuture;
 import org.threadly.concurrent.future.SettableListenableFuture;
+import org.threadly.concurrent.limiter.RateLimiterExecutor;
 
 /**
  * <p>This class handles the execution of a completely generated execution script.</p>
@@ -95,7 +97,7 @@ public class ExecutableScript {
     System.gc();
     
     // TODO - move this to a regular class?
-    scriptAssistant.executeAsyncIfStillRunning(new Runnable() {
+    scriptAssistant.scheduler.execute(new Runnable() {
       @Override
       public void run() {
         for (ExecutionItem step : steps) {
@@ -123,13 +125,10 @@ public class ExecutableScript {
    * @author jent - Mike Jensen
    */
   private static class ScriptAssistant implements ExecutionItem.ExecutionAssistant {
-    private final AtomicBoolean running;
-    private List<ListenableFuture<StepResult>> futures = null;
+    private final AtomicBoolean running = new AtomicBoolean(false);
+    private volatile SubmitterExecutorInterface limiter = null;
     private PriorityScheduler scheduler = null;
-    
-    public ScriptAssistant() {
-      running = new AtomicBoolean(false);
-    }
+    private List<ListenableFuture<StepResult>> futures = null;
     
     public void start(int threadPoolSize, List<ListenableFuture<StepResult>> futures) {
       if (! running.compareAndSet(false, true)) {
@@ -147,6 +146,7 @@ public class ExecutableScript {
         @Override
         public void run() {
           scheduler = null;
+          limiter = null;
           running.set(false);
         }
       });
@@ -158,10 +158,28 @@ public class ExecutableScript {
     }
     
     @Override
-    public void executeAsyncIfStillRunning(Runnable toRun) {
-      PriorityScheduler scheduler = this.scheduler;
-      if (scheduler != null) {
-        scheduler.execute(toRun);
+    public ListenableFuture<?> executeAsyncIfStillRunning(Runnable toRun, boolean realStep) {
+      SubmitterExecutorInterface limiter = this.limiter;
+      if (realStep && limiter != null) {
+        return limiter.submit(toRun);
+      } else {
+        PriorityScheduler scheduler = this.scheduler;
+        if (scheduler != null) {
+          return scheduler.submit(toRun);
+        }
+      }
+      return FutureUtils.immediateResultFuture(null);
+    }
+    
+    @Override
+    public void setStepPerSecondLimit(int newLimit) {
+      if (newLimit < 1) {
+        limiter = null;
+      } else {
+        PriorityScheduler scheduler = this.scheduler;
+        if (scheduler != null) {
+          limiter = new RateLimiterExecutor(scheduler, newLimit);
+        }
       }
     }
   }
@@ -255,9 +273,20 @@ public class ExecutableScript {
        * was already canceled so execution should not be needed.
        * 
        * @param toRun Task to be executed
+       * @param realStep {@code true} if executing step from graph, not a helper task
+       * @return Future that will complete when runnable has finished running
        */
-      public void executeAsyncIfStillRunning(Runnable toRun);
+      public ListenableFuture<?> executeAsyncIfStillRunning(Runnable toRun, boolean realStep);
       
+      /**
+       * Changes what the limit is for how many steps per second are allowed to execute.  Delays 
+       * in step execution are NOT factored in step run time.  Provide {@code 0} to set no limit 
+       * and allow step execution to run as fast as possible.
+       * 
+       * @param newLimit Limit of steps run per second
+       */
+      public void setStepPerSecondLimit(int newLimit);
+
       /**
        * Returns the list of futures for the current test script run.  If not currently running this 
        * will be null.

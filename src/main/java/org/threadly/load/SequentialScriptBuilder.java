@@ -1,6 +1,5 @@
 package org.threadly.load;
 
-import org.threadly.concurrent.future.FutureUtils;
 import org.threadly.load.ExecutableScript.ExecutionItem;
 
 /**
@@ -131,23 +130,6 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
   // TODO - can this be put into StepCollectionRunner
   protected static class SequentialStep extends StepCollectionRunner {
     @Override
-    public void runChainItem(ExecutionAssistant assistant) {
-      for (ExecutionItem chainItem : getSteps()) {
-        chainItem.runChainItem(assistant);
-        // this call will block till execution is done, thus making us wait to run the next chain item
-        try {
-          if (StepResultCollectionUtils.getFailedResult(chainItem.getFutures()) != null) {
-            FutureUtils.cancelIncompleteFutures(getFutures(), true);
-            return;
-          }
-        } catch (InterruptedException e) {
-          // let thread exit
-          return;
-        }
-      }
-    }
-
-    @Override
     public SequentialStep makeCopy() {
       SequentialStep result = new SequentialStep();
       for (ExecutionItem chainItem : getSteps()) {
@@ -157,11 +139,6 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
         }
       }
       return result;
-    }
-
-    @Override
-    public ChildItems getChildItems() {
-      return new ChildItemContainer(getSteps(), true);
     }
   }
 }
