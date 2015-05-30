@@ -79,12 +79,6 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
     addStep(step, 1);
   }
   
-  @Override
-  protected void addStep(ExecutionItem step) {
-    verifyValid();
-    currentStep.addItem(step);
-  }
-  
   /**
    * Adds a step which will be run in parallel with other steps on this builder.  This step will 
    * be executed concurrently the number of times provided in this call.
@@ -98,6 +92,12 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
     for (int i = 0; i < times; i++) {
       currentStep.addItem(new ScriptStepRunner(step, true));
     }
+  }
+  
+  @Override
+  protected void addStep(ExecutionItem step) {
+    verifyValid();
+    currentStep.addItem(step);
   }
   
   private void incrementThreads(int value) {

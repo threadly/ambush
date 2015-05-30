@@ -1,13 +1,14 @@
 package org.threadly.load;
 
 import static org.junit.Assert.*;
+import static org.threadly.load.AmbushTestUtils.*;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.junit.Test;
 import org.threadly.concurrent.future.FutureUtils;
@@ -16,8 +17,6 @@ import org.threadly.util.StringUtils;
 
 @SuppressWarnings("javadoc")
 public class SimpleExecutionGraphTest {
-  private static final int TEST_COMPLEXITY = 10;
-  
   @Test
   public void inSequenceOnlyTest() throws InterruptedException, ExecutionException {
     String identifier1 = StringUtils.randomString(5);
@@ -100,31 +99,8 @@ public class SimpleExecutionGraphTest {
     assertTrue(tr.getRunTime(TimeUnit.MILLISECONDS) >= runTime);
   }
   
-  private static List<TestStep> makeTestSteps(final Runnable startRunnable, int count) {
-    List<TestStep> result = new ArrayList<TestStep>(count);
-    for (int i = 0; i < count; i++) {
-      result.add(new TestStep() {
-        @Override
-        public void handleRunStart() {
-          if (startRunnable != null) {
-            startRunnable.run();
-          }
-        }
-      });
-    }
-    
-    return result;
-  }
-  
-  private static void addSteps(List<TestStep> steps, AbstractScriptBuilder builder) {
-    Iterator<TestStep> it = steps.iterator();
-    while (it.hasNext()) {
-      builder.addStep(it.next());
-    }
-  }
-  
   @Test
-  public void inSequenceSectionsOfParallelTest() throws InterruptedException {
+  public void inSequenceSectionsOfParallelTest() throws InterruptedException, TimeoutException, ExecutionException {
     final List<TestStep> parallelSteps1 = makeTestSteps(null, TEST_COMPLEXITY);
     ParallelScriptBuilder builder = new ParallelScriptBuilder();
     addSteps(parallelSteps1, builder);
@@ -139,15 +115,16 @@ public class SimpleExecutionGraphTest {
       }
     }, TEST_COMPLEXITY);
     addSteps(parallelSteps2, builder);
-    
+
+    assertEquals(TEST_COMPLEXITY, builder.getNeededThreadCount());
     List<? extends ListenableFuture<StepResult>> futures = builder.build().startScript();
     assertEquals(TEST_COMPLEXITY * 2, futures.size());
     
-    FutureUtils.blockTillAllComplete(futures);
+    FutureUtils.blockTillAllCompleteOrFirstError(futures, 10 * 1000);
   }
   
   @Test
-  public void inSequenceSectionsOfParallelByAddingBuildersTest() throws InterruptedException {
+  public void inSequenceSectionsOfParallelByAddingBuildersTest() throws InterruptedException, TimeoutException, ExecutionException {
     final List<TestStep> parallelSteps1 = makeTestSteps(null, TEST_COMPLEXITY);
     SequentialScriptBuilder sBuilder = new SequentialScriptBuilder();
     ParallelScriptBuilder pBuilder1 = new ParallelScriptBuilder();
@@ -166,11 +143,12 @@ public class SimpleExecutionGraphTest {
     
     sBuilder.addSteps(pBuilder1);
     sBuilder.addSteps(pBuilder2);
-    
+
+    assertEquals(TEST_COMPLEXITY + 1, sBuilder.getNeededThreadCount());
     List<? extends ListenableFuture<StepResult>> futures = sBuilder.build().startScript();
     assertEquals(TEST_COMPLEXITY * 2, futures.size());
     
-    FutureUtils.blockTillAllComplete(futures);
+    FutureUtils.blockTillAllCompleteOrFirstError(futures, 10 * 1000);
   }
   
   @Test
@@ -212,5 +190,24 @@ public class SimpleExecutionGraphTest {
         }
       }
     }
+  }
+  
+  @Test
+  public void inParallelSequenceChainsTest() throws InterruptedException, TimeoutException {
+    final List<TestStep> steps1 = makeTestSteps(null, TEST_COMPLEXITY);
+    final List<TestStep> steps2 = makeTestSteps(null, TEST_COMPLEXITY);
+    ParallelScriptBuilder pBuilder = new ParallelScriptBuilder();
+    SequentialScriptBuilder sBuilder1 = new SequentialScriptBuilder();
+    addSteps(steps1, sBuilder1);
+    SequentialScriptBuilder sBuilder2 = new SequentialScriptBuilder();
+    addSteps(steps2, sBuilder2);
+    pBuilder.addSteps(sBuilder1);
+    pBuilder.addSteps(sBuilder2);
+    
+    assertEquals(4, pBuilder.getNeededThreadCount());
+    List<? extends ListenableFuture<StepResult>> futures = pBuilder.build().startScript();
+    assertEquals(TEST_COMPLEXITY * 2, futures.size());
+    
+    FutureUtils.blockTillAllComplete(futures, 10 * 1000);
   }
 }
