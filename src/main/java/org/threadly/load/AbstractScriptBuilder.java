@@ -165,8 +165,11 @@ public abstract class AbstractScriptBuilder {
     }
   }
   
+  /**
+   * Finalizes the script construction if it has not already finalized.  This is not the same as {@link #replaced}
+   */
   private void maybeFinalize() {
-    verifyValid();
+    verifyNotReplaced();
     if (! finalized.getAndSet(true)) {
       finalizeStep();
       stepRunners.trimToSize();
@@ -179,12 +182,31 @@ public abstract class AbstractScriptBuilder {
    */
   protected abstract void finalizeStep();
   
+  /**
+   * Marks this builder as replaced.  Once replaced no operations can continue to happen on this 
+   * builder.  All further building must be done on the builder which is replacing this one.
+   */
   protected void replaced() {
     maybeFinalize();
     replacementException = new Exception();
   }
   
+  /**
+   * Verifies this builder is still valid to build on.  Meaning it has not been finalized or 
+   * replaced by another builder.
+   */
   protected void verifyValid() {
+    verifyNotReplaced();
+    if (finalized.get()) {
+      throw new IllegalStateException("Script finalized");
+    }
+  }
+  
+  /**
+   * Verifies that this builder has not been replaced by another builder.  This is a subset check 
+   * of {@link #verifyValid()}.
+   */
+  protected void verifyNotReplaced() {
     if (replacementException != null) {
       throw new RuntimeException("This builder has been replaced, " + 
                                    "caused by exception will indicate the stack of where it was replaced", 
@@ -236,7 +258,7 @@ public abstract class AbstractScriptBuilder {
       if (items == null) {
         return Collections.<ExecutionItem>emptyList().iterator();
       } else {
-        return Arrays.asList(items).iterator();
+        return Collections.unmodifiableList(Arrays.asList(items)).iterator();
       }
     }
   }
@@ -343,10 +365,20 @@ public abstract class AbstractScriptBuilder {
       futures = new ArrayList<SettableListenableFuture<StepResult>>();
     }
 
+    /**
+     * Call to check how many steps are in this collection.
+     * 
+     * @return Number of steps this collection runs
+     */
     public int getStepCount() {
       return steps.length;
     }
     
+    /**
+     * Returns the backing array of steps which will be ran by this collection.
+     * 
+     * @return Array of items which will be ran
+     */
     public ExecutionItem[] getSteps() {
       return steps;
     }
@@ -356,6 +388,11 @@ public abstract class AbstractScriptBuilder {
       futures.trimToSize();
     }
     
+    /**
+     * Adds an {@link ExecutionItem} to this collection of steps to run.
+     * 
+     * @param item Item to be added, can not be {@code null}
+     */
     public void addItem(ExecutionItem item) {
       futures.addAll(item.getFutures());
       ExecutionItem[] newSteps = new ExecutionItem[steps.length + 1];
@@ -367,11 +404,6 @@ public abstract class AbstractScriptBuilder {
     @Override
     public List<? extends SettableListenableFuture<StepResult>> getFutures() {
       return futures;
-    }
-
-    @Override
-    public ChildItems getChildItems() {
-      return new ChildItemContainer(getSteps(), true);
     }
     
     @Override
@@ -408,7 +440,19 @@ public abstract class AbstractScriptBuilder {
       ListenableFuture<?> f = assistant.executeAsyncIfStillRunning(new Runnable() {
         @Override
         public void run() {
-          runStep();
+          setRunningThread(Thread.currentThread());
+          
+          long startNanos = Clock.systemNanoTime();
+          StepResult result;
+          try {
+            scriptStep.runStep();
+            long endNanos = Clock.systemNanoTime();
+            result = new StepResult(scriptStep.getIdentifier(), endNanos - startNanos);
+          } catch (Throwable t) {
+            long endNanos = Clock.systemNanoTime();
+            result = new StepResult(scriptStep.getIdentifier(), endNanos - startNanos, t);
+          }
+          setResult(result);
         }
       }, true);
       if (! runAsync) {
@@ -424,22 +468,6 @@ public abstract class AbstractScriptBuilder {
           throw ExceptionUtils.makeRuntime(cause);
         }
       }
-    }
-    
-    protected void runStep() {
-      setRunningThread(Thread.currentThread());
-      
-      long startNanos = Clock.systemNanoTime();
-      StepResult result;
-      try {
-        scriptStep.runStep();
-        long endNanos = Clock.systemNanoTime();
-        result = new StepResult(scriptStep.getIdentifier(), endNanos - startNanos);
-      } catch (Throwable t) {
-        long endNanos = Clock.systemNanoTime();
-        result = new StepResult(scriptStep.getIdentifier(), endNanos - startNanos, t);
-      }
-      setResult(result);
     }
 
     @Override

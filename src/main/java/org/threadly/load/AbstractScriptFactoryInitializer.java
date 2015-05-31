@@ -101,6 +101,12 @@ abstract class AbstractScriptFactoryInitializer {
     }
   }
   
+  /**
+   * Prints the usage for the expected arguments to be taken in from the main class, and then 
+   * exits with a non-zero status code.
+   * 
+   * @param runningScript Possible script that is loaded, or {@code null} if unknown
+   */
   protected void usageAndExit(String runningScript) {
     if (runningScript == null || runningScript.isEmpty()) {
       runningScript = "script.factory.to.call";

@@ -83,7 +83,7 @@ public class ScriptGraphBuilder extends AbstractScriptFactoryInitializer {
         return longestNode;
       } else {
         Node joinPoint = new Node();
-        for(Node n : childNodes) {
+        for (Node n : childNodes) {
           n.addChildNode(joinPoint);
         }
         return joinPoint;

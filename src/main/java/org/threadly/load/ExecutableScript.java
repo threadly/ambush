@@ -53,7 +53,6 @@ public class ExecutableScript {
    *  
    * @return Copy of execution graph
    */
-  // TODO - remove?
   public List<ExecutionItem> makeItemsCopy() {
     ArrayList<ExecutionItem> result = new ArrayList<ExecutionItem>(steps.length);
     for (ExecutionItem step : steps) {

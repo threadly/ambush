@@ -45,7 +45,7 @@ public abstract class AbstractScriptStep implements ScriptStepInterface {
   private final String identifier;
   
   protected AbstractScriptStep(String identifier) {
-    this.identifier = identifier;
+    this.identifier = StringUtils.makeNonNull(identifier);
   }
   
   @Override

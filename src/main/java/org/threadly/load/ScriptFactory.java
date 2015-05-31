@@ -22,6 +22,14 @@ import org.threadly.util.ArgumentVerifier;
 public abstract class ScriptFactory {
   protected Properties properties = null;
   
+  /**
+   * Initializes the {@link ScriptFactory} with the properties to load values used in the 
+   * {@link #buildScript()}.  For that reason this should be called right after construction, and 
+   * before {@link #buildScript()} is invoked.  This is not done in the constructor because 
+   * extending classes should all have an empty (default) constructor.
+   * 
+   * @param properties Parameters to load values from
+   */
   protected void initialize(Properties properties) {
     ArgumentVerifier.assertNotNull(properties, "properties");
     

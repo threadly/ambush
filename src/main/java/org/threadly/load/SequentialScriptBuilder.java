@@ -157,5 +157,10 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
       }
       return result;
     }
+
+    @Override
+    public ChildItems getChildItems() {
+      return new ChildItemContainer(getSteps(), true);
+    }
   }
 }

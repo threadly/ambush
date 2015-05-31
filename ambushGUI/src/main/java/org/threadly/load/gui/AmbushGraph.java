@@ -1,9 +1,12 @@
 package org.threadly.load.gui;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
@@ -153,20 +156,38 @@ public class AmbushGraph implements DragDetectListener, MouseListener, MouseMove
    */
   public void updateGraphModel(Node headNode) {
     Map<Node, GuiPoint> buildingMap = new HashMap<Node, GuiPoint>();
-    traverseNode(headNode, buildingMap, 1, 1, new HashMap<Integer, Integer>());
+    Map<Integer, List<GuiPoint>> xRegionCountMap = new HashMap<Integer, List<GuiPoint>>();
+    traverseNode(headNode, buildingMap, 1, 1, xRegionCountMap);
+    
+    // cleanup xRegionCountMap
+    Iterator<List<GuiPoint>> it = xRegionCountMap.values().iterator();
+    while (it.hasNext()) {
+      List<GuiPoint> xRegion = it.next();
+      Collections.sort(xRegion, new Comparator<GuiPoint>() {
+        @Override
+        public int compare(GuiPoint o1, GuiPoint o2) {
+          return o1.yRegion - o2.yRegion;
+        }
+      });
+      Iterator<GuiPoint> points = xRegion.iterator();
+      int currentPoint = 0;
+      while (points.hasNext()) {
+        points.next().yRegion = ++currentPoint;
+      }
+    }
     
     guiNodeMap = buildingMap;
   }
   
   private void traverseNode(Node currentNode, Map<Node, GuiPoint> buildingMap, 
-                            int xRegion, int yRegion, Map<Integer, Integer> xRegionCountMap) {
+                            int xRegion, int yRegion, Map<Integer, List<GuiPoint>> xRegionCountMap) {
     GuiPoint currentPoint = buildingMap.get(currentNode);
     if (currentPoint == null) {
-      currentPoint = new GuiPoint(makeRandomColor(), xRegionCountMap, 
+      currentPoint = new GuiPoint(makeRandomColor(), 
                                   shell.getBounds().width, shell.getBounds().height, 
-                                  xRegion, yRegion);
+                                  xRegionCountMap, xRegion, yRegion);
       buildingMap.put(currentNode, currentPoint);
-      increment(xRegion, xRegionCountMap);
+      add(currentPoint, xRegionCountMap);
       int childNodeRegion = yRegion - 1;
       Iterator<Node> it = currentNode.getChildNodes().iterator();
       while (it.hasNext()) {
@@ -182,29 +203,30 @@ public class AmbushGraph implements DragDetectListener, MouseListener, MouseMove
     }
   }
   
-  private static void increment(int key, Map<Integer, Integer> map) {
-    Integer currValue = map.get(key);
-    if (currValue == null) {
-      map.put(key, 1);
-    } else {
-      map.put(key, currValue + 1);
+  private static void add(GuiPoint point, Map<Integer, List<GuiPoint>> map) {
+    List<GuiPoint> currList = map.get(point.xRegion);
+    if (currList == null) {
+      currList = new LinkedList<GuiPoint>();
+      map.put(point.xRegion, currList);
+    }
+    if (! currList.contains(point)) {
+      currList.add(point);
     }
   }
   
-  private static void decrement(int key, Map<Integer, Integer> map) {
-    Integer currValue = map.get(key);
-    if (currValue == null) {
-      throw new IllegalStateException("No value for key: " + key);
-    } else {
-      map.put(key, currValue - 1);
+  private static void remove(GuiPoint point, Map<Integer, List<GuiPoint>> map) {
+    List<GuiPoint> currList = map.get(point.xRegion);
+    if (currList != null) {
+      currList.remove(point);
     }
   }
   
-  private void shiftLeft(Node currNode, GuiPoint point, Map<Node, GuiPoint> buildingMap, 
-                         int shiftAmount, Map<Integer, Integer> xRegionCountMap, Set<Node> shiftedNodes) {
-    decrement(point.xRegion, xRegionCountMap);
+  private void shiftLeft(Node currNode, GuiPoint point, 
+                         Map<Node, GuiPoint> buildingMap, int shiftAmount, 
+                         Map<Integer, List<GuiPoint>> xRegionCountMap, Set<Node> shiftedNodes) {
+    remove(point, xRegionCountMap);
     point.xRegion += shiftAmount;
-    increment(point.xRegion, xRegionCountMap);
+    add(point, xRegionCountMap);
     Iterator<Node> it = currNode.getChildNodes().iterator();
     while (it.hasNext()) {
       Node child = it.next();
@@ -342,21 +364,21 @@ public class AmbushGraph implements DragDetectListener, MouseListener, MouseMove
   
   private static class GuiPoint {
     private final Color color;
-    private final Map<Integer, Integer> xRegionCountMap;
     private final int xSize;
     private final int ySize;
+    private Map<Integer, List<GuiPoint>> xRegionCountMap;
     private int xRegion;
     private int yRegion;
     private boolean coordiantesSet;
     private int x;
     private int y;
     
-    public GuiPoint(Color color, Map<Integer, Integer> xRegionCountMap, 
-                    int xSize, int ySize, int xRegion, int yRegion) {
+    public GuiPoint(Color color, int xSize, int ySize, 
+                    Map<Integer, List<GuiPoint>> xRegionCountMap, int xRegion, int yRegion) {
       this.color = color;
-      this.xRegionCountMap = xRegionCountMap;
       this.xSize = xSize;
       this.ySize = ySize;
+      this.xRegionCountMap = xRegionCountMap;
       this.xRegion = xRegion;
       this.yRegion = yRegion;
     }
@@ -369,13 +391,8 @@ public class AmbushGraph implements DragDetectListener, MouseListener, MouseMove
         } else {
           x = getSoftGridPoint(xRegion, xRegionCountMap.size(), xSize);
         }
-        // TODO - this is not working for large maps like I expected it to
-        int totalY = xRegionCountMap.get(xRegion);
-        if (totalY < yRegion) {
-          totalY = yRegion;
-          xRegionCountMap.put(xRegion, yRegion);
-        }
-        y = getSoftGridPoint(yRegion, totalY, ySize);
+        y = getSoftGridPoint(yRegion, xRegionCountMap.get(xRegion).size(), ySize);
+        xRegionCountMap = null; // no longer needed, allow GC
       }
     }
     

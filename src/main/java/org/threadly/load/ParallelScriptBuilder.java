@@ -241,5 +241,10 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
       }
       return result;
     }
+
+    @Override
+    public ChildItems getChildItems() {
+      return new ChildItemContainer(getSteps(), false);
+    }
   }
 }

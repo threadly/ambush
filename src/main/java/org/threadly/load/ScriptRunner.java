@@ -74,17 +74,33 @@ public class ScriptRunner extends AbstractScriptFactoryInitializer {
     super(args);
   }
   
+  /**
+   * Outputs/logs this message/output from the script execution/results.  By default this reports 
+   * to {@link System#out}.println(String).  This can be overridden to use other loggers.
+   * 
+   * @param msg String output from runner
+   */
+  protected void out(String msg) {
+    System.out.println(msg);
+  }
+  
+  /**
+   * Starts the execution of the script.  This executes and reports the output to 
+   * {@link #out(String)}.  That output includes tracked details during execution like speed and 
+   * success or failures.
+   * 
+   * @throws InterruptedException Thrown if thread is interrupted during execution
+   */
   protected void runScript() throws InterruptedException {
     long start = Clock.accurateForwardProgressingMillis();
     List<ListenableFuture<StepResult>> futures = script.startScript();
     List<StepResult> fails = StepResultCollectionUtils.getAllFailedResults(futures);
     long end = Clock.accurateForwardProgressingMillis();
     if (fails.isEmpty()) {
-      System.out.println("All steps passed!");
+      out("All steps passed!");
     } else {
       Map<String, List<StepResult>> failureCountMap = new HashMap<String, List<StepResult>>();
-      System.out.println(fails.size() + " STEPS FAILED!!");
-      System.out.println();
+      out(fails.size() + " STEPS FAILED!!" + StringUtils.NEW_LINE);
       {
         Iterator<StepResult> it = fails.iterator();
         while (it.hasNext()) {
@@ -109,25 +125,24 @@ public class ScriptRunner extends AbstractScriptFactoryInitializer {
                 descriptions.add(sr.getDescription());
               }
             }
-            System.out.println("Error occured " + e.getValue().size() + " times for the following steps:");
+            out("Error occured " + e.getValue().size() + " times for the following steps:");
             for (String s : descriptions) {
-              System.out.println('\t' + s);
+              out('\t' + s);
             }
-            System.out.println("All share failure cause:");
+            out("All share failure cause:");
           } else {
-            System.out.println("Step " + e.getValue().get(0).getDescription() + " failed due to:");
+            out("Step " + e.getValue().get(0).getDescription() + " failed due to:");
           }
-          System.out.println(e.getKey());
-          System.out.println();
+          out(e.getKey() + StringUtils.NEW_LINE);
         }
       }
     }
-    System.out.println("Totals steps executed: " + futures.size());
-    System.out.println("Test execution time: " + ((end - start) / 1000) + " seconds");
+    out("Totals steps executed: " + futures.size());
+    out("Test execution time: " + ((end - start) / 1000) + " seconds");
     double averageRunMillis = StepResultCollectionUtils.getAverageRuntime(futures, TimeUnit.MILLISECONDS);
-    System.out.println("Average time spent per step: " + averageRunMillis + " milliseconds");
+    out("Average time spent per step: " + averageRunMillis + " milliseconds");
     StepResult longestStep = StepResultCollectionUtils.getLongestRuntimeStep(futures);
-    System.out.println("Longest running step: " + longestStep.getDescription() + 
-                         ", ran for: " + longestStep.getRunTime(TimeUnit.MILLISECONDS) + " milliseconds");
+    out("Longest running step: " + longestStep.getDescription() + 
+          ", ran for: " + longestStep.getRunTime(TimeUnit.MILLISECONDS) + " milliseconds");
   }
 }
