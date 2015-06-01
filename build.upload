@@ -1,5 +1,4 @@
 apply from: 'build.shared'
-apply plugin: 'maven'
 apply plugin: 'signing'
 
 sourceCompatibility = 1.6

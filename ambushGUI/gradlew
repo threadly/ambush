@@ -1,3 +1,0 @@
-#!/bin/bash
-cd ../
-./gradlew -b ambushGUI/build.gradle $*
