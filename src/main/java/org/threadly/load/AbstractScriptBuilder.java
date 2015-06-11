@@ -221,6 +221,9 @@ public abstract class AbstractScriptBuilder {
    */
   public ExecutableScript build() {
     maybeFinalize();
+    if (stepRunners.isEmpty()) {
+      throw new IllegalStateException("No steps added to script to build");
+    }
     return new ExecutableScript(neededThreadCount, stepRunners);
   }
   

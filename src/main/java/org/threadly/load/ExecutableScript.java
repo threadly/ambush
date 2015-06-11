@@ -12,6 +12,7 @@ import org.threadly.concurrent.future.FutureUtils;
 import org.threadly.concurrent.future.ListenableFuture;
 import org.threadly.concurrent.future.SettableListenableFuture;
 import org.threadly.concurrent.limiter.RateLimiterExecutor;
+import org.threadly.util.ArgumentVerifier;
 
 /**
  * <p>This class handles the execution of a completely generated execution script.</p>
@@ -33,6 +34,11 @@ public class ExecutableScript {
    * @param steps Collection of steps which should be executed one after another
    */
   public ExecutableScript(int neededThreadQty, List<ExecutionItem> steps) {
+    if (steps.isEmpty()) {
+      throw new IllegalArgumentException("Can not construct script with no steps");
+    }
+    ArgumentVerifier.assertGreaterThanZero(neededThreadQty, "neededThreadQty");
+    
     this.neededThreadQty = neededThreadQty;
     this.steps = steps.toArray(new ExecutionItem[steps.size()]);
     scriptAssistant = new ScriptAssistant();
