@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.threadly.concurrent.PriorityScheduler;
 import org.threadly.concurrent.SubmitterExecutorInterface;
+import org.threadly.concurrent.future.ExecuteOnGetFutureTask;
 import org.threadly.concurrent.future.FutureUtils;
 import org.threadly.concurrent.future.ListenableFuture;
 import org.threadly.concurrent.future.SettableListenableFuture;
@@ -170,7 +171,9 @@ public class ExecutableScript {
       } else {
         PriorityScheduler scheduler = this.scheduler;
         if (scheduler != null) {
-          return scheduler.submit(toRun);
+          ExecuteOnGetFutureTask<?> result = new ExecuteOnGetFutureTask<Void>(toRun);
+          scheduler.execute(result);
+          return result;
         }
       }
       return FutureUtils.immediateResultFuture(null);
