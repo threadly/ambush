@@ -75,7 +75,7 @@ public abstract class AbstractScriptBuilder {
    * 
    * @param stepsPerSecondLimit Steps per second allowed to execute
    */
-  public void setMaxScriptStepRate(final int stepsPerSecondLimit) {
+  public void setMaxScriptStepRate(double stepsPerSecondLimit) {
     addStep(new RateAdjustmentStep(stepsPerSecondLimit));
   }
 
@@ -272,9 +272,9 @@ public abstract class AbstractScriptBuilder {
    * @author jent - Mike Jensen
    */
   private static class RateAdjustmentStep extends GhostExecutionItem {
-    private final int newRateLimit;
+    private final double newRateLimit;
     
-    public RateAdjustmentStep(int newRateLimit) {
+    public RateAdjustmentStep(double newRateLimit) {
       this.newRateLimit = newRateLimit;
     }
     

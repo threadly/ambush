@@ -177,7 +177,7 @@ public class ExecutableScript {
     }
     
     @Override
-    public void setStepPerSecondLimit(int newLimit) {
+    public void setStepPerSecondLimit(double newLimit) {
       if (newLimit < 1) {
         limiter = null;
       } else {
@@ -290,7 +290,7 @@ public class ExecutableScript {
        * 
        * @param newLimit Limit of steps run per second
        */
-      public void setStepPerSecondLimit(int newLimit);
+      public void setStepPerSecondLimit(double newLimit);
 
       /**
        * Returns the list of futures for the current test script run.  If not currently running this 
