@@ -148,9 +148,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
       return;
     }
     incrementThreads(parallelSteps.getNeededThreadCount());
-    for (ExecutionItem step : parallelSteps.currentStep.getSteps()) {
-      currentStep.addItem(step);
-    }
+    currentStep.addItems(parallelSteps.currentStep.getSteps());
   }
   
   /**
@@ -229,7 +227,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
         return;
       }
     }
-    
+
     @Override
     public ParallelStep makeCopy() {
       ParallelStep result = new ParallelStep();

@@ -391,6 +391,12 @@ public abstract class AbstractScriptBuilder {
       futures.trimToSize();
     }
     
+    private ExecutionItem[] makeStepsCopy(int extraEndSpace) {
+      ExecutionItem[] newSteps = new ExecutionItem[steps.length + extraEndSpace];
+      System.arraycopy(steps, 0, newSteps, 0, steps.length);
+      return newSteps;
+    }
+    
     /**
      * Adds an {@link ExecutionItem} to this collection of steps to run.
      * 
@@ -398,9 +404,28 @@ public abstract class AbstractScriptBuilder {
      */
     public void addItem(ExecutionItem item) {
       futures.addAll(item.getFutures());
-      ExecutionItem[] newSteps = new ExecutionItem[steps.length + 1];
-      System.arraycopy(steps, 0, newSteps, 0, steps.length);
+      
+      ExecutionItem[] newSteps = makeStepsCopy(1);
       newSteps[steps.length] = item;
+      steps = newSteps;
+    }
+
+    /**
+     * Adds an array of {@link ExecutionItem}'s to this collection of steps to run.
+     * 
+     * @param items Items to be added, can not be {@code null}
+     */
+    public void addItems(ExecutionItem[] items) {
+      if (items.length == 0) {
+        return;
+      }
+      
+      for (ExecutionItem ei : items) {
+        futures.addAll(ei.getFutures());
+      }
+      
+      ExecutionItem[] newSteps = makeStepsCopy(items.length);
+      System.arraycopy(items, 0, newSteps, steps.length, items.length);
       steps = newSteps;
     }
     

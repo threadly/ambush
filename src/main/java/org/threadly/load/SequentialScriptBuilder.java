@@ -95,9 +95,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
       return;
     }
     maybeUpdatedMaximumThreads(sequentialSteps.getNeededThreadCount());
-    for (ExecutionItem step : sequentialSteps.currentStep.getSteps()) {
-      currentStep.addItem(step);
-    }
+    currentStep.addItems(sequentialSteps.currentStep.getSteps());
   }
   
   /**
