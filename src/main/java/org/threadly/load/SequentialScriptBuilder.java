@@ -67,7 +67,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
    */
   @Override
   public void addStep(ScriptStepInterface step) {
-    addStep(new ScriptStepRunner(step, false));
+    addStep(new ScriptStepRunner(step));
   }
   
   @Override
@@ -128,22 +128,34 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
    */
   protected static class SequentialStep extends StepCollectionRunner {
     @Override
-    public void runChainItem(ExecutionAssistant assistant) {
-      for (ExecutionItem chainItem : getSteps()) {
-        if (chainItem.manipulatesExecutionAssistant()) {
-          assistant = assistant.makeCopy();
+    public void runChainItem(final ExecutionAssistant fAssistant, 
+                             boolean runningInParallelContext) {
+      Runnable chainRunner = new Runnable() {
+        @Override
+        public void run() {
+          ExecutionAssistant assistant = fAssistant;
+          for (ExecutionItem chainItem : getSteps()) {
+            if (chainItem.manipulatesExecutionAssistant()) {
+              assistant = assistant.makeCopy();
+            }
+            chainItem.runChainItem(assistant, false);
+            // this call will block till execution is done, thus making us wait to run the next chain item
+            try {
+              if (StepResultCollectionUtils.getFailedResult(chainItem.getFutures()) != null) {
+                FutureUtils.cancelIncompleteFutures(getFutures(), true);
+                return;
+              }
+            } catch (InterruptedException e) {
+              // let thread exit
+              return;
+            }
+          } 
         }
-        chainItem.runChainItem(assistant);
-        // this call will block till execution is done, thus making us wait to run the next chain item
-        try {
-          if (StepResultCollectionUtils.getFailedResult(chainItem.getFutures()) != null) {
-            FutureUtils.cancelIncompleteFutures(getFutures(), true);
-            return;
-          }
-        } catch (InterruptedException e) {
-          // let thread exit
-          return;
-        }
+      };
+      if (runningInParallelContext) {
+        fAssistant.executeAsyncIfStillRunning(chainRunner, false);
+      } else {
+        chainRunner.run();
       }
     }
     

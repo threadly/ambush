@@ -1,11 +1,7 @@
 package org.threadly.load;
 
-import java.util.List;
-
 import org.threadly.concurrent.future.FutureUtils;
-import org.threadly.concurrent.future.SettableListenableFuture;
 import org.threadly.load.ExecutableScript.ExecutionItem;
-import org.threadly.load.SequentialScriptBuilder.SequentialStep;
 
 /**
  * <p>A builder which's added steps will all be executed in parallel.</p>
@@ -90,7 +86,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
     verifyValid();
     incrementThreads(times);
     for (int i = 0; i < times; i++) {
-      currentStep.addItem(new ScriptStepRunner(step, true));
+      currentStep.addItem(new ScriptStepRunner(step));
     }
   }
   
@@ -126,7 +122,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
       return;
     }
     incrementThreads(sequentialSteps.getNeededThreadCount() + 1);
-    currentStep.addItem(new SequentialScriptWrapper(sequentialSteps));
+    currentStep.addItem(sequentialSteps.currentStep);
   }
   
   /**
@@ -152,76 +148,17 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
   }
   
   /**
-   * <p>Implementation of {@link ExecutionItem} where multiple test steps will be executed in 
-   * sequence, while other steps in this build can run concurrently at the same time.</p>
-   * 
-   * @author jent - Mike Jensen
-   */
-  private static class SequentialScriptWrapper implements ExecutionItem {
-    private final SequentialStep sequentialStep;
-    
-    public SequentialScriptWrapper(SequentialScriptBuilder sequentialScript) {
-      this.sequentialStep = sequentialScript.currentStep;
-    }
-    
-    private SequentialScriptWrapper(SequentialStep sequentialStep) {
-      this.sequentialStep = sequentialStep;
-    }
-
-    @Override
-    public void prepareForRun() {
-      sequentialStep.prepareForRun();
-    }
-    
-    @Override
-    public void runChainItem(final ExecutionAssistant assistant) {
-      assistant.executeAsyncIfStillRunning(new Runnable() {
-        @Override
-        public void run() {
-          sequentialStep.runChainItem(assistant);
-        }
-      }, false);
-      // no need to block this thread for these to run
-    }
-
-    @Override
-    public List<? extends SettableListenableFuture<StepResult>> getFutures() {
-      return sequentialStep.getFutures();
-    }
-
-    @Override
-    public ExecutionItem makeCopy() {
-      SequentialStep ss = sequentialStep.makeCopy();
-      if (ss == null) {
-        return null;
-      } else {
-        return new SequentialScriptWrapper(ss);
-      }
-    }
-
-    @Override
-    public ChildItems getChildItems() {
-      return new ChildItemContainer(sequentialStep.getSteps(), true);
-    }
-
-    @Override
-    public boolean manipulatesExecutionAssistant() {
-      return false;
-    }
-  }
-  
-  /**
    * <p>Collection of steps which will all be farmed off to the executor as fast as possible.</p>
    * 
    * @author jent - Mike Jensen
    */
   protected static class ParallelStep extends StepCollectionRunner {
     @Override
-    public void runChainItem(ExecutionAssistant assistant) {
+    public void runChainItem(ExecutionAssistant assistant, boolean runningInParallelContext) {
       for (ExecutionItem chainItem : getSteps()) {
-        chainItem.runChainItem(assistant);
+        chainItem.runChainItem(assistant, true);
       }
-      // this call will block till execution is done, thus making us wait to run the next chain item
+      // block till all parallel steps finish, or first error
       try {
         if (StepResultCollectionUtils.getFailedResult(getFutures()) != null) {
           FutureUtils.cancelIncompleteFutures(getFutures(), true);

@@ -279,7 +279,7 @@ public abstract class AbstractScriptBuilder {
     }
     
     @Override
-    public void runChainItem(ExecutionAssistant assistant) {
+    public void runChainItem(ExecutionAssistant assistant, boolean runningInParallelContext) {
       assistant.setStepPerSecondLimit(newRateLimit);
     }
 
@@ -307,7 +307,7 @@ public abstract class AbstractScriptBuilder {
     }
 
     @Override
-    public void runChainItem(ExecutionAssistant assistant) {
+    public void runChainItem(ExecutionAssistant assistant, boolean runningInParallelContext) {
       try {
         List<? extends ListenableFuture<?>> scriptFutures = assistant.getGlobalRunningFutureSet();
         double doneCount = 0;
@@ -465,12 +465,10 @@ public abstract class AbstractScriptBuilder {
   protected static class ScriptStepRunner extends SettableListenableFuture<StepResult>
                                           implements ExecutionItem {
     protected final ScriptStepInterface scriptStep;
-    protected final boolean runAsync;
     
-    public ScriptStepRunner(ScriptStepInterface scriptStep, boolean runAsync) {
+    public ScriptStepRunner(ScriptStepInterface scriptStep) {
       super(false);
       this.scriptStep = scriptStep;
-      this.runAsync = runAsync;
     }
 
     @Override
@@ -479,7 +477,7 @@ public abstract class AbstractScriptBuilder {
     }
 
     @Override
-    public void runChainItem(ExecutionAssistant assistant) {
+    public void runChainItem(ExecutionAssistant assistant, boolean runningInParallelContext) {
       ListenableFuture<?> f = assistant.executeAsyncIfStillRunning(new Runnable() {
         @Override
         public void run() {
@@ -498,7 +496,7 @@ public abstract class AbstractScriptBuilder {
           setResult(result);
         }
       }, true);
-      if (! runAsync) {
+      if (! runningInParallelContext) {
         try {
           f.get();
         } catch (InterruptedException e) {
@@ -515,7 +513,7 @@ public abstract class AbstractScriptBuilder {
 
     @Override
     public ScriptStepRunner makeCopy() {
-      return new ScriptStepRunner(scriptStep, runAsync);
+      return new ScriptStepRunner(scriptStep);
     }
 
     @Override

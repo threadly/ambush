@@ -108,7 +108,7 @@ public class ExecutableScript {
       @Override
       public void run() {
         for (ExecutionItem step : steps) {
-          step.runChainItem(scriptAssistant);
+          step.runChainItem(scriptAssistant, false);
           // this call will block till the step is done, thus preventing execution of the next step
           try {
             if (StepResultCollectionUtils.getFailedResult(step.getFutures()) != null) {
@@ -232,18 +232,23 @@ public class ExecutableScript {
   protected interface ExecutionItem {
     /**
      * Called to allow the {@link ExecutionItem} do any cleanup, or other operations needed to 
-     * ensure a smooth invokation of {@link #runChainItem(ExecutionAssistant)}.
+     * ensure a smooth invocation of {@link #runChainItem(ExecutionAssistant, boolean)}.
      */
     public void prepareForRun();
     
     /**
      * Run the current items execution.  This may execute async on the provided 
      * {@link ExecutionAssistant}, but returned futures from {@link #getFutures()} should not fully 
-     * complete until the chain item completes.
+     * complete until the chain item completes.  
+     * 
+     * The boolean to indicate if this is being called from a parallel context or not can help guide 
+     * the item to know if it should block for execution, or if it should be executed through the 
+     * assistant.
      * 
      * @param assistant {@link ExecutionAssistant} which is performing the execution
+     * @param runningInParallelContext Boolean to indicate if execution is occurring from an in-parallel step
      */
-    public void runChainItem(ExecutionAssistant assistant);
+    public void runChainItem(ExecutionAssistant assistant, boolean runningInParallelContext);
     
     /**
      * Check if this execution item directly applies changes to the provided 
