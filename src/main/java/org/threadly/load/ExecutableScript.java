@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.threadly.concurrent.PriorityScheduler;
 import org.threadly.concurrent.SubmitterExecutorInterface;
@@ -103,7 +104,7 @@ public class ExecutableScript {
     System.gc();
     
     // TODO - move this to a regular class?
-    scriptAssistant.scheduler.execute(new Runnable() {
+    scriptAssistant.scheduler.get().execute(new Runnable() {
       @Override
       public void run() {
         for (ExecutionItem step : steps) {
@@ -111,7 +112,7 @@ public class ExecutableScript {
           // this call will block till the step is done, thus preventing execution of the next step
           try {
             if (StepResultCollectionUtils.getFailedResult(step.getFutures()) != null) {
-              FutureUtils.cancelIncompleteFutures(scriptAssistant.getRunningFutureSet(), true);
+              FutureUtils.cancelIncompleteFutures(scriptAssistant.getGlobalRunningFutureSet(), true);
               return;
             }
           } catch (InterruptedException e) {
@@ -131,18 +132,43 @@ public class ExecutableScript {
    * @author jent - Mike Jensen
    */
   private static class ScriptAssistant implements ExecutionItem.ExecutionAssistant {
-    private final AtomicBoolean running = new AtomicBoolean(false);
-    private volatile SubmitterExecutorInterface limiter = null;
-    private PriorityScheduler scheduler = null;
-    private List<ListenableFuture<StepResult>> futures = null;
+    private final AtomicBoolean running;
+    private final AtomicReference<PriorityScheduler> scheduler;
+    private final AtomicReference<List<ListenableFuture<StepResult>>> futures;
+    private volatile SubmitterExecutorInterface limiter;
     
+    private ScriptAssistant(ScriptAssistant scriptAssistant) {
+      running = scriptAssistant.running;
+      scheduler = scriptAssistant.scheduler;
+      futures = scriptAssistant.futures;
+      limiter = scriptAssistant.limiter;
+      
+      /* with the way FutureUtils works, the ListenableFuture made here wont be able to be 
+       * garbage collected, even though we don't have a reference to it.  Thus ensuring we 
+       * cleanup our running references.
+       */
+      FutureUtils.makeCompleteFuture(futures.get()).addListener(new Runnable() {
+        @Override
+        public void run() {
+          limiter = null;
+        }
+      });
+    }
+    
+    public ScriptAssistant() {
+      running = new AtomicBoolean(false);
+      scheduler = new AtomicReference<PriorityScheduler>(null);
+      futures = new AtomicReference<List<ListenableFuture<StepResult>>>(null);
+      limiter = null;
+    }
+
     public void start(int threadPoolSize, List<ListenableFuture<StepResult>> futures) {
       if (! running.compareAndSet(false, true)) {
         throw new IllegalStateException("Already running");
       }
-      scheduler = new PriorityScheduler(threadPoolSize);
-      scheduler.prestartAllThreads();
-      this.futures = Collections.unmodifiableList(futures);
+      scheduler.set(new PriorityScheduler(threadPoolSize));
+      scheduler.get().prestartAllThreads();
+      this.futures.set(Collections.unmodifiableList(futures));
       
       /* with the way FutureUtils works, the ListenableFuture made here wont be able to be 
        * garbage collected, even though we don't have a reference to it.  Thus ensuring we 
@@ -151,7 +177,7 @@ public class ExecutableScript {
       FutureUtils.makeCompleteFuture(futures).addListener(new Runnable() {
         @Override
         public void run() {
-          scheduler = null;
+          scheduler.set(null);
           limiter = null;
           running.set(false);
         }
@@ -159,8 +185,8 @@ public class ExecutableScript {
     }
 
     @Override
-    public List<ListenableFuture<StepResult>> getRunningFutureSet() {
-      return futures;
+    public List<ListenableFuture<StepResult>> getGlobalRunningFutureSet() {
+      return futures.get();
     }
     
     @Override
@@ -169,7 +195,7 @@ public class ExecutableScript {
       if (realStep && limiter != null) {
         return limiter.submit(toRun);
       } else {
-        PriorityScheduler scheduler = this.scheduler;
+        PriorityScheduler scheduler = this.scheduler.get();
         if (scheduler != null) {
           ExecuteOnGetFutureTask<?> result = new ExecuteOnGetFutureTask<Void>(toRun);
           scheduler.execute(result);
@@ -181,14 +207,19 @@ public class ExecutableScript {
     
     @Override
     public void setStepPerSecondLimit(double newLimit) {
-      if (newLimit < 1) {
+      if (newLimit <= 0) {
         limiter = null;
       } else {
-        PriorityScheduler scheduler = this.scheduler;
+        PriorityScheduler scheduler = this.scheduler.get();
         if (scheduler != null) {
           limiter = new RateLimiterExecutor(scheduler, newLimit);
         }
       }
+    }
+    
+    @Override
+    public ScriptAssistant makeCopy() {
+      return new ScriptAssistant(this);
     }
   }
   
@@ -213,6 +244,14 @@ public class ExecutableScript {
      * @param assistant {@link ExecutionAssistant} which is performing the execution
      */
     public void runChainItem(ExecutionAssistant assistant);
+    
+    /**
+     * Check if this execution item directly applies changes to the provided 
+     * {@link ExecutionAssistant}.
+     * 
+     * @return {@code true} if the step manipulates the assistant
+     */
+    public boolean manipulatesExecutionAssistant();
 
     /**
      * Returns the collection of futures which represent this test.  There should be one future 
@@ -301,7 +340,16 @@ public class ExecutableScript {
        * 
        * @return List of futures that will complete for the current execution
        */
-      public List<ListenableFuture<StepResult>> getRunningFutureSet();
+      public List<ListenableFuture<StepResult>> getGlobalRunningFutureSet();
+      
+      /**
+       * Copies this assistant.  The copied assistant will be backed by the same scheduler and 
+       * futures.  However things which are chain sensitive (like the execution limit) will be 
+       * copied in their initial state, but changes will not impact previous copies.
+       *  
+       * @return A new assistant instance
+       */
+      public ExecutionAssistant makeCopy();
     }
   }
 }

@@ -287,6 +287,11 @@ public abstract class AbstractScriptBuilder {
     public String toString() {
       return RateAdjustmentStep.class.getSimpleName();
     }
+
+    @Override
+    public boolean manipulatesExecutionAssistant() {
+      return true;
+    }
   }
   
   /**
@@ -304,7 +309,7 @@ public abstract class AbstractScriptBuilder {
     @Override
     public void runChainItem(ExecutionAssistant assistant) {
       try {
-        List<? extends ListenableFuture<?>> scriptFutures = assistant.getRunningFutureSet();
+        List<? extends ListenableFuture<?>> scriptFutures = assistant.getGlobalRunningFutureSet();
         double doneCount = 0;
         Iterator<? extends ListenableFuture<?>> it = scriptFutures.iterator();
         while (it.hasNext()) {
@@ -322,6 +327,11 @@ public abstract class AbstractScriptBuilder {
     @Override
     public String toString() {
       return ProgressScriptStep.class.getSimpleName();
+    }
+
+    @Override
+    public boolean manipulatesExecutionAssistant() {
+      return false;
     }
   }
   
@@ -438,6 +448,11 @@ public abstract class AbstractScriptBuilder {
     public String toString() {
       return Arrays.toString(steps);
     }
+
+    @Override
+    public boolean manipulatesExecutionAssistant() {
+      return false;
+    }
   }
 
   /**
@@ -517,6 +532,11 @@ public abstract class AbstractScriptBuilder {
     @Override
     public String toString() {
       return scriptStep.getIdentifier();
+    }
+
+    @Override
+    public boolean manipulatesExecutionAssistant() {
+      return false;
     }
   }
 }

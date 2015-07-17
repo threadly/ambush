@@ -130,6 +130,9 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
     @Override
     public void runChainItem(ExecutionAssistant assistant) {
       for (ExecutionItem chainItem : getSteps()) {
+        if (chainItem.manipulatesExecutionAssistant()) {
+          assistant = assistant.makeCopy();
+        }
         chainItem.runChainItem(assistant);
         // this call will block till execution is done, thus making us wait to run the next chain item
         try {

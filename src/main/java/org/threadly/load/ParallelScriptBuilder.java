@@ -203,6 +203,11 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
     public ChildItems getChildItems() {
       return new ChildItemContainer(sequentialStep.getSteps(), true);
     }
+
+    @Override
+    public boolean manipulatesExecutionAssistant() {
+      return false;
+    }
   }
   
   /**
