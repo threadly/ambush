@@ -283,7 +283,7 @@ public abstract class AbstractScriptBuilder {
 
     @Override
     public String toString() {
-      return RateAdjustmentStep.class.getSimpleName();
+      return "RateAdjustment:" + newRateLimit;
     }
 
     @Override
