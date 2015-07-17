@@ -11,6 +11,7 @@ import org.threadly.concurrent.PriorityScheduler;
 import org.threadly.concurrent.SubmitterExecutorInterface;
 import org.threadly.concurrent.future.ExecuteOnGetFutureTask;
 import org.threadly.concurrent.future.FutureUtils;
+import org.threadly.concurrent.future.ImmediateResultListenableFuture;
 import org.threadly.concurrent.future.ListenableFuture;
 import org.threadly.concurrent.future.SettableListenableFuture;
 import org.threadly.concurrent.limiter.RateLimiterExecutor;
@@ -108,7 +109,7 @@ public class ExecutableScript {
       @Override
       public void run() {
         for (ExecutionItem step : steps) {
-          step.runChainItem(scriptAssistant, false);
+          step.runChainItem(scriptAssistant);
           // this call will block till the step is done, thus preventing execution of the next step
           try {
             if (StepResultCollectionUtils.getFailedResult(step.getFutures()) != null) {
@@ -190,19 +191,33 @@ public class ExecutableScript {
     }
     
     @Override
-    public ListenableFuture<?> executeAsyncIfStillRunning(Runnable toRun, boolean realStep) {
+    public ListenableFuture<?> executeIfStillRunning(ExecutionItem item, boolean forceAsync) {
+      // the existence of the scheduler (and possibly limiter) indicate still running
       SubmitterExecutorInterface limiter = this.limiter;
-      if (realStep && limiter != null) {
-        return limiter.submit(toRun);
+      if (limiter != null && ! item.isChainExecutor()) {
+        return limiter.submit(wrapInRunnable(item));
       } else {
         PriorityScheduler scheduler = this.scheduler.get();
         if (scheduler != null) {
-          ExecuteOnGetFutureTask<?> result = new ExecuteOnGetFutureTask<Void>(toRun);
-          scheduler.execute(result);
-          return result;
+          if (forceAsync) {
+            ExecuteOnGetFutureTask<?> result = new ExecuteOnGetFutureTask<Void>(wrapInRunnable(item));
+            scheduler.execute(result);
+            return result;
+          } else {
+            item.runChainItem(this);
+          }
         }
       }
-      return FutureUtils.immediateResultFuture(null);
+      return ImmediateResultListenableFuture.NULL_RESULT;
+    }
+    
+    private Runnable wrapInRunnable(final ExecutionItem item) {
+      return new Runnable() {
+        @Override
+        public void run() {
+          item.runChainItem(ScriptAssistant.this);
+        }
+      };
     }
     
     @Override
@@ -232,23 +247,18 @@ public class ExecutableScript {
   protected interface ExecutionItem {
     /**
      * Called to allow the {@link ExecutionItem} do any cleanup, or other operations needed to 
-     * ensure a smooth invocation of {@link #runChainItem(ExecutionAssistant, boolean)}.
+     * ensure a smooth invocation of {@link #runChainItem(ExecutionAssistant)}.
      */
     public void prepareForRun();
     
     /**
      * Run the current items execution.  This may execute async on the provided 
      * {@link ExecutionAssistant}, but returned futures from {@link #getFutures()} should not fully 
-     * complete until the chain item completes.  
-     * 
-     * The boolean to indicate if this is being called from a parallel context or not can help guide 
-     * the item to know if it should block for execution, or if it should be executed through the 
-     * assistant.
+     * complete until the chain item completes.
      * 
      * @param assistant {@link ExecutionAssistant} which is performing the execution
-     * @param runningInParallelContext Boolean to indicate if execution is occurring from an in-parallel step
      */
-    public void runChainItem(ExecutionAssistant assistant, boolean runningInParallelContext);
+    public void runChainItem(ExecutionAssistant assistant);
     
     /**
      * Check if this execution item directly applies changes to the provided 
@@ -257,6 +267,8 @@ public class ExecutableScript {
      * @return {@code true} if the step manipulates the assistant
      */
     public boolean manipulatesExecutionAssistant();
+    
+    public boolean isChainExecutor();
 
     /**
      * Returns the collection of futures which represent this test.  There should be one future 
@@ -324,11 +336,11 @@ public class ExecutableScript {
        * has already stopped (likely from an error or failed step).  In those cases the task's future 
        * was already canceled so execution should not be needed.
        * 
-       * @param toRun Task to be executed
-       * @param realStep {@code true} if executing step from graph, not a helper task
+       * @param item ExecutionItem to be executed
+       * @param forceAsync {@code false} to potentially allow execution inside calling thread
        * @return Future that will complete when runnable has finished running
        */
-      public ListenableFuture<?> executeAsyncIfStillRunning(Runnable toRun, boolean realStep);
+      public ListenableFuture<?> executeIfStillRunning(ExecutionItem item, boolean forceAsync);
       
       /**
        * Changes what the limit is for how many steps per second are allowed to execute.  Delays 

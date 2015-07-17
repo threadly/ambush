@@ -1,7 +1,11 @@
 package org.threadly.load;
 
+import java.util.concurrent.ExecutionException;
+
 import org.threadly.concurrent.future.FutureUtils;
+import org.threadly.concurrent.future.ListenableFuture;
 import org.threadly.load.ExecutableScript.ExecutionItem;
+import org.threadly.util.ExceptionUtils;
 
 /**
  * <p>A builder which's added steps will all be executed in sequence.</p>
@@ -128,34 +132,33 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
    */
   protected static class SequentialStep extends StepCollectionRunner {
     @Override
-    public void runChainItem(final ExecutionAssistant fAssistant, 
-                             boolean runningInParallelContext) {
-      Runnable chainRunner = new Runnable() {
-        @Override
-        public void run() {
-          ExecutionAssistant assistant = fAssistant;
-          for (ExecutionItem chainItem : getSteps()) {
-            if (chainItem.manipulatesExecutionAssistant()) {
-              assistant = assistant.makeCopy();
-            }
-            chainItem.runChainItem(assistant, false);
-            // this call will block till execution is done, thus making us wait to run the next chain item
-            try {
-              if (StepResultCollectionUtils.getFailedResult(chainItem.getFutures()) != null) {
-                FutureUtils.cancelIncompleteFutures(getFutures(), true);
-                return;
-              }
-            } catch (InterruptedException e) {
-              // let thread exit
-              return;
-            }
-          } 
+    public void runChainItem(ExecutionAssistant assistant) {
+      for (ExecutionItem chainItem : getSteps()) {
+        if (chainItem.manipulatesExecutionAssistant()) {
+          assistant = assistant.makeCopy();
         }
-      };
-      if (runningInParallelContext) {
-        fAssistant.executeAsyncIfStillRunning(chainRunner, false);
-      } else {
-        chainRunner.run();
+        ListenableFuture<?> f = assistant.executeIfStillRunning(chainItem, false);
+        // block till execution is done
+        try {
+          f.get();
+        } catch (InterruptedException e) {
+          // reset status and let thread exit
+          Thread.currentThread().interrupt();
+          return;
+        } catch (ExecutionException e) {
+          throw ExceptionUtils.makeRuntime(e.getCause());
+        }
+        // block till all child executions finish, thus making us wait to run the next chain item
+        try {
+          if (StepResultCollectionUtils.getFailedResult(chainItem.getFutures()) != null) {
+            // failure occurred, cancel other steps
+            FutureUtils.cancelIncompleteFutures(getFutures(), true);
+            return;
+          }
+        } catch (InterruptedException e) {
+          // let thread exit
+          return;
+        }
       }
     }
     

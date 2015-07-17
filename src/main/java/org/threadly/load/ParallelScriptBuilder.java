@@ -154,9 +154,9 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
    */
   protected static class ParallelStep extends StepCollectionRunner {
     @Override
-    public void runChainItem(ExecutionAssistant assistant, boolean runningInParallelContext) {
+    public void runChainItem(ExecutionAssistant assistant) {
       for (ExecutionItem chainItem : getSteps()) {
-        chainItem.runChainItem(assistant, true);
+        assistant.executeIfStillRunning(chainItem, true);
       }
       // block till all parallel steps finish, or first error
       try {

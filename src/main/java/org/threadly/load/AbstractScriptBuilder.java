@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.threadly.concurrent.future.ListenableFuture;
@@ -13,7 +12,6 @@ import org.threadly.concurrent.future.SettableListenableFuture;
 import org.threadly.load.ExecutableScript.ExecutionItem;
 import org.threadly.load.ExecutableScript.ExecutionItem.ChildItems;
 import org.threadly.util.Clock;
-import org.threadly.util.ExceptionUtils;
 
 /**
  * <p>Provides the shared implementation among all execution step builders.  This also defines the 
@@ -279,7 +277,7 @@ public abstract class AbstractScriptBuilder {
     }
     
     @Override
-    public void runChainItem(ExecutionAssistant assistant, boolean runningInParallelContext) {
+    public void runChainItem(ExecutionAssistant assistant) {
       assistant.setStepPerSecondLimit(newRateLimit);
     }
 
@@ -307,7 +305,7 @@ public abstract class AbstractScriptBuilder {
     }
 
     @Override
-    public void runChainItem(ExecutionAssistant assistant, boolean runningInParallelContext) {
+    public void runChainItem(ExecutionAssistant assistant) {
       try {
         List<? extends ListenableFuture<?>> scriptFutures = assistant.getGlobalRunningFutureSet();
         double doneCount = 0;
@@ -360,6 +358,11 @@ public abstract class AbstractScriptBuilder {
     @Override
     public ChildItems getChildItems() {
       return new ChildItemContainer();
+    }
+
+    @Override
+    public boolean isChainExecutor() {
+      return false;
     }
   }
   
@@ -453,6 +456,11 @@ public abstract class AbstractScriptBuilder {
     public boolean manipulatesExecutionAssistant() {
       return false;
     }
+
+    @Override
+    public boolean isChainExecutor() {
+      return true;
+    }
   }
 
   /**
@@ -477,38 +485,20 @@ public abstract class AbstractScriptBuilder {
     }
 
     @Override
-    public void runChainItem(ExecutionAssistant assistant, boolean runningInParallelContext) {
-      ListenableFuture<?> f = assistant.executeAsyncIfStillRunning(new Runnable() {
-        @Override
-        public void run() {
-          setRunningThread(Thread.currentThread());
-          
-          long startNanos = Clock.systemNanoTime();
-          StepResult result;
-          try {
-            scriptStep.runStep();
-            long endNanos = Clock.systemNanoTime();
-            result = new StepResult(scriptStep.getIdentifier(), endNanos - startNanos);
-          } catch (Throwable t) {
-            long endNanos = Clock.systemNanoTime();
-            result = new StepResult(scriptStep.getIdentifier(), endNanos - startNanos, t);
-          }
-          setResult(result);
-        }
-      }, true);
-      if (! runningInParallelContext) {
-        try {
-          f.get();
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-        } catch (ExecutionException e) {
-          Throwable cause = e.getCause();
-          if (cause == null) {
-            cause = e;
-          }
-          throw ExceptionUtils.makeRuntime(cause);
-        }
+    public void runChainItem(ExecutionAssistant assistant) {
+      setRunningThread(Thread.currentThread());
+      
+      long startNanos = Clock.systemNanoTime();
+      StepResult result;
+      try {
+        scriptStep.runStep();
+        long endNanos = Clock.systemNanoTime();
+        result = new StepResult(scriptStep.getIdentifier(), endNanos - startNanos);
+      } catch (Throwable t) {
+        long endNanos = Clock.systemNanoTime();
+        result = new StepResult(scriptStep.getIdentifier(), endNanos - startNanos, t);
       }
+      setResult(result);
     }
 
     @Override
@@ -534,6 +524,11 @@ public abstract class AbstractScriptBuilder {
 
     @Override
     public boolean manipulatesExecutionAssistant() {
+      return false;
+    }
+
+    @Override
+    public boolean isChainExecutor() {
       return false;
     }
   }
