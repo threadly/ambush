@@ -8,7 +8,7 @@ public class TestStep extends AbstractScriptStep {
   private final TestRunnable testRunnable;
 
   public TestStep() {
-    this(StringUtils.randomString(5));
+    this(StringUtils.makeRandomString(5));
   }
 
   public TestStep(String identifier) {

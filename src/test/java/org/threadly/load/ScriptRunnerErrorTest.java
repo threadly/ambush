@@ -16,7 +16,7 @@ public class ScriptRunnerErrorTest {
   
   @Test
   public void unknownClassTest() {
-    assertTrue(new TestScriptRunner(new String[]{StringUtils.randomString(5)}).usageAndExitCalled);
+    assertTrue(new TestScriptRunner(new String[]{StringUtils.makeRandomString(5)}).usageAndExitCalled);
   }
   
   @Test

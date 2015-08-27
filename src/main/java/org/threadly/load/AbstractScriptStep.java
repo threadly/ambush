@@ -39,13 +39,13 @@ public abstract class AbstractScriptStep implements ScriptStepInterface {
    * @return Returns the set parameter, will never return {@code null}, but an empty string is possible
    */
   public static String getGlobalParam(String key) {
-    return StringUtils.makeNonNull(PARAMS.get(key));
+    return StringUtils.nullToEmpty(PARAMS.get(key));
   }
   
   private final String identifier;
   
   protected AbstractScriptStep(String identifier) {
-    this.identifier = StringUtils.makeNonNull(identifier);
+    this.identifier = StringUtils.nullToEmpty(identifier);
   }
   
   @Override

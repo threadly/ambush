@@ -63,7 +63,7 @@ public class ScriptRunner extends AbstractScriptFactoryInitializer {
    */
   protected static void printFailureAndExit(Throwable t) {
     t.printStackTrace();
-    int hashCode = StringUtils.makeNonNull(t.getMessage()).hashCode();
+    int hashCode = StringUtils.nullToEmpty(t.getMessage()).hashCode();
     if (hashCode == 0) {
       hashCode = -1;
     }

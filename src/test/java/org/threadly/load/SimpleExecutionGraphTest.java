@@ -19,8 +19,8 @@ import org.threadly.util.StringUtils;
 public class SimpleExecutionGraphTest {
   @Test
   public void inSequenceOnlyTest() throws InterruptedException, ExecutionException {
-    String identifier1 = StringUtils.randomString(5);
-    String identifier2 = StringUtils.randomString(5);
+    String identifier1 = StringUtils.makeRandomString(5);
+    String identifier2 = StringUtils.makeRandomString(5);
     int runTime = 2;
     final TestStep step1 = new TestStep(identifier1, runTime);
     TestStep step2 = new TestStep(identifier2, runTime) {
@@ -82,7 +82,7 @@ public class SimpleExecutionGraphTest {
   
   @Test
   public void inParallelOnlyTest() throws InterruptedException, ExecutionException {
-    String identifier = StringUtils.randomString(5);
+    String identifier = StringUtils.makeRandomString(5);
     int runTime = 2;
     int runCount = 10;
     TestStep step = new TestStep(identifier, runTime);

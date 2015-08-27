@@ -45,7 +45,7 @@ public class ScriptFactoryTest {
   
   @Test
   public void getBoolTest() {
-    String key = StringUtils.randomString(5);
+    String key = StringUtils.makeRandomString(5);
     properties.put(key, "true");
     
     assertTrue(factory.getBoolValue(key));
@@ -53,8 +53,8 @@ public class ScriptFactoryTest {
   
   @Test
   public void getBoolParseFail() {
-    String key = StringUtils.randomString(5);
-    properties.put(key, StringUtils.randomString(5));
+    String key = StringUtils.makeRandomString(5);
+    properties.put(key, StringUtils.makeRandomString(5));
     
     try {
       factory.getBoolValue(key);
@@ -72,7 +72,7 @@ public class ScriptFactoryTest {
   
   @Test
   public void getIntTest() {
-    String key = StringUtils.randomString(5);
+    String key = StringUtils.makeRandomString(5);
     int val = 10;
     properties.put(key, Integer.toString(val));
     
@@ -81,8 +81,8 @@ public class ScriptFactoryTest {
   
   @Test
   public void getIntParseFail() {
-    String key = StringUtils.randomString(5);
-    properties.put(key, "s" + StringUtils.randomString(5));
+    String key = StringUtils.makeRandomString(5);
+    properties.put(key, "s" + StringUtils.makeRandomString(5));
     
     try {
       factory.getIntValue(key);
@@ -101,7 +101,7 @@ public class ScriptFactoryTest {
   
   @Test
   public void getLongTest() {
-    String key = StringUtils.randomString(5);
+    String key = StringUtils.makeRandomString(5);
     int val = 10;
     properties.put(key, Integer.toString(val));
     
@@ -110,8 +110,8 @@ public class ScriptFactoryTest {
   
   @Test
   public void getLongParseFail() {
-    String key = StringUtils.randomString(5);
-    properties.put(key, "s" + StringUtils.randomString(5));
+    String key = StringUtils.makeRandomString(5);
+    properties.put(key, "s" + StringUtils.makeRandomString(5));
     
     try {
       factory.getLongValue(key);
@@ -130,7 +130,7 @@ public class ScriptFactoryTest {
   
   @Test
   public void getDoubleTest() {
-    String key = StringUtils.randomString(5);
+    String key = StringUtils.makeRandomString(5);
     double val = 8.8;
     properties.put(key, Double.toString(val));
     
@@ -139,8 +139,8 @@ public class ScriptFactoryTest {
   
   @Test
   public void getDoubleParseFail() {
-    String key = StringUtils.randomString(5);
-    properties.put(key, "s" + StringUtils.randomString(5));
+    String key = StringUtils.makeRandomString(5);
+    properties.put(key, "s" + StringUtils.makeRandomString(5));
     
     try {
       factory.getDoubleValue(key);
@@ -159,8 +159,8 @@ public class ScriptFactoryTest {
   
   @Test
   public void getStringTest() {
-    String key = StringUtils.randomString(5);
-    String val = StringUtils.randomString(5);
+    String key = StringUtils.makeRandomString(5);
+    String val = StringUtils.makeRandomString(5);
     properties.put(key, val);
     
     assertEquals(val, factory.getStringValue(key));
@@ -174,13 +174,13 @@ public class ScriptFactoryTest {
   
   @Test
   public void getBoolDefaultTest() {
-    assertTrue(factory.getBoolValue(StringUtils.randomString(5), true));
+    assertTrue(factory.getBoolValue(StringUtils.makeRandomString(5), true));
   }
   
   @Test
   public void getBoolDefaultParseFail() {
-    String key = StringUtils.randomString(5);
-    properties.put(key, StringUtils.randomString(5));
+    String key = StringUtils.makeRandomString(5);
+    properties.put(key, StringUtils.makeRandomString(5));
     
     try {
       factory.getBoolValue(key, true);
@@ -192,15 +192,15 @@ public class ScriptFactoryTest {
   
   @Test
   public void getIntDefaultTest() {
-    String key = StringUtils.randomString(5);
+    String key = StringUtils.makeRandomString(5);
     int val = 10;
     assertEquals(val, factory.getIntValue(key, val));
   }
   
   @Test
   public void getIntDefaultParseFail() {
-    String key = StringUtils.randomString(5);
-    properties.put(key, "s" + StringUtils.randomString(5));
+    String key = StringUtils.makeRandomString(5);
+    properties.put(key, "s" + StringUtils.makeRandomString(5));
     
     try {
       factory.getIntValue(key, 10);
@@ -213,7 +213,7 @@ public class ScriptFactoryTest {
   
   @Test
   public void getLongDefaultTest() {
-    String key = StringUtils.randomString(5);
+    String key = StringUtils.makeRandomString(5);
     int val = 10;
     
     assertEquals(val, factory.getLongValue(key, val));
@@ -221,8 +221,8 @@ public class ScriptFactoryTest {
   
   @Test
   public void getLongDefaultParseFail() {
-    String key = StringUtils.randomString(5);
-    properties.put(key, "s" + StringUtils.randomString(5));
+    String key = StringUtils.makeRandomString(5);
+    properties.put(key, "s" + StringUtils.makeRandomString(5));
     
     try {
       factory.getLongValue(key, 10);
@@ -235,7 +235,7 @@ public class ScriptFactoryTest {
   
   @Test
   public void getDoubleDefaultTest() {
-    String key = StringUtils.randomString(5);
+    String key = StringUtils.makeRandomString(5);
     double val = 8.8;
     
     assertEquals(val, factory.getDoubleValue(key, val), 0);
@@ -243,8 +243,8 @@ public class ScriptFactoryTest {
   
   @Test
   public void getDoubleDefaultParseFail() {
-    String key = StringUtils.randomString(5);
-    properties.put(key, "s" + StringUtils.randomString(5));
+    String key = StringUtils.makeRandomString(5);
+    properties.put(key, "s" + StringUtils.makeRandomString(5));
     
     try {
       factory.getDoubleValue(key, 8.8);
@@ -257,8 +257,8 @@ public class ScriptFactoryTest {
   
   @Test
   public void getStringDefaultTest() {
-    String key = StringUtils.randomString(5);
-    String val = StringUtils.randomString(5);
+    String key = StringUtils.makeRandomString(5);
+    String val = StringUtils.makeRandomString(5);
     
     assertEquals(val, factory.getStringValue(key, val));
   }

@@ -18,7 +18,7 @@ public class ScriptRunnerBasicScriptTest {
   private static final int intTestVal = 10;
   private static final long longTestVal = Clock.lastKnownTimeMillis();
   private static final double doubleTestVal = Clock.lastKnownTimeMillis() / 1000.;
-  private static final String stringTestVal = StringUtils.randomString(5);
+  private static final String stringTestVal = StringUtils.makeRandomString(5);
   private static AsyncVerifier av = new AsyncVerifier();
   
   @Test

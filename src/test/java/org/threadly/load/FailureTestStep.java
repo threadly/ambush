@@ -7,7 +7,7 @@ public class FailureTestStep extends TestStep {
   private final RuntimeException failure;
 
   public FailureTestStep() {
-    this(StringUtils.randomString(5), 0);
+    this(StringUtils.makeRandomString(5), 0);
   }
 
   protected FailureTestStep(String identifier) {
@@ -19,7 +19,7 @@ public class FailureTestStep extends TestStep {
   }
 
   public FailureTestStep(int runTime) {
-    this(StringUtils.randomString(5), runTime);
+    this(StringUtils.makeRandomString(5), runTime);
   }
 
   protected FailureTestStep(String identifier, int runTime) {
