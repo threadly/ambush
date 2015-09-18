@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.threadly.concurrent.future.ListenableFuture;
 import org.threadly.util.Clock;
-import org.threadly.util.ExceptionHandlerInterface;
+import org.threadly.util.ExceptionHandler;
 import org.threadly.util.ExceptionUtils;
 import org.threadly.util.StringUtils;
 
@@ -44,7 +44,7 @@ public class ScriptRunner extends AbstractScriptFactoryInitializer {
    * exceptions, this likely would indicate a bug in Ambush. 
    */
   protected static void setupExceptionHandler() {
-    ExceptionUtils.setDefaultExceptionHandler(new ExceptionHandlerInterface() {
+    ExceptionUtils.setDefaultExceptionHandler(new ExceptionHandler() {
       @Override
       public void handleException(Throwable thrown) {
         synchronized (this) { // synchronized to prevent terminal corruption from multiple failures

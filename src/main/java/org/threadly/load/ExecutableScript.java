@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.threadly.concurrent.PriorityScheduler;
-import org.threadly.concurrent.SubmitterExecutorInterface;
+import org.threadly.concurrent.SubmitterExecutor;
 import org.threadly.concurrent.future.ExecuteOnGetFutureTask;
 import org.threadly.concurrent.future.FutureUtils;
 import org.threadly.concurrent.future.ImmediateResultListenableFuture;
@@ -136,7 +136,7 @@ public class ExecutableScript {
     private final AtomicBoolean running;
     private final AtomicReference<PriorityScheduler> scheduler;
     private final AtomicReference<List<ListenableFuture<StepResult>>> futures;
-    private volatile SubmitterExecutorInterface limiter;
+    private volatile SubmitterExecutor limiter;
     
     private ScriptAssistant(ScriptAssistant scriptAssistant) {
       running = scriptAssistant.running;
@@ -193,7 +193,7 @@ public class ExecutableScript {
     @Override
     public ListenableFuture<?> executeIfStillRunning(ExecutionItem item, boolean forceAsync) {
       // the existence of the scheduler (and possibly limiter) indicate still running
-      SubmitterExecutorInterface limiter = this.limiter;
+      SubmitterExecutor limiter = this.limiter;
       if (limiter != null && ! item.isChainExecutor()) {
         return limiter.submit(wrapInRunnable(item));
       } else {
