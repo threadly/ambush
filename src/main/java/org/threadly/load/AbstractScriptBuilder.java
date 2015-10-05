@@ -103,12 +103,12 @@ public abstract class AbstractScriptBuilder {
 
   /**
    * Add a step to this builder.  For more specific step addition descriptions please see: 
-   * {@link SequentialScriptBuilder#addStep(ScriptStepInterface)} and 
-   * {@link ParallelScriptBuilder#addStep(ScriptStepInterface)}.
+   * {@link SequentialScriptBuilder#addStep(ScriptStep)} and 
+   * {@link ParallelScriptBuilder#addStep(ScriptStep)}.
    * 
    * @param step Test step to add to builder
    */
-  public abstract void addStep(ScriptStepInterface step);
+  public abstract void addStep(ScriptStep step);
   
   /**
    * Add a {@link ExecutionItem} to this builder.  This is a private API so that we can add test 
@@ -464,17 +464,17 @@ public abstract class AbstractScriptBuilder {
   }
 
   /**
-   * <p>Implementation for executing a {@link ScriptStepInterface} instance.  This class also 
-   * represents the future for the test step execution.  If executed it is guaranteed to provide a 
+   * <p>Implementation for executing a {@link ScriptStep} instance.  This class also represents 
+   * the future for the test step execution.  If executed it is guaranteed to provide a 
    * {@link StepResult} (with or without error).</p>
    * 
    * @author jent - Mike Jensen
    */
   protected static class ScriptStepRunner extends SettableListenableFuture<StepResult>
                                           implements ExecutionItem {
-    protected final ScriptStepInterface scriptStep;
+    protected final ScriptStep scriptStep;
     
-    public ScriptStepRunner(ScriptStepInterface scriptStep) {
+    public ScriptStepRunner(ScriptStep scriptStep) {
       super(false);
       this.scriptStep = scriptStep;
     }
@@ -519,7 +519,7 @@ public abstract class AbstractScriptBuilder {
     
     @Override
     public String toString() {
-      return scriptStep.getIdentifier();
+      return scriptStep.getIdentifier().toString();
     }
 
     @Override

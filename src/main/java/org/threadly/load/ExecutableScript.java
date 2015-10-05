@@ -99,6 +99,8 @@ public class ExecutableScript {
     }
     result.trimToSize();
     
+    CharsDeduplicator.clearCache();
+    
     scriptAssistant.start(neededThreadQty + 1, result);
     
     // perform a gc before starting execution so that we can run as smooth as possible
@@ -268,6 +270,7 @@ public class ExecutableScript {
      */
     public boolean manipulatesExecutionAssistant();
     
+    // TODO - javadoc
     public boolean isChainExecutor();
 
     /**

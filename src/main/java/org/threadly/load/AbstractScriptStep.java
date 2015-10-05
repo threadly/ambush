@@ -6,13 +6,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.threadly.util.StringUtils;
 
 /**
- * <p>The basic foundation for a {@link ScriptStepInterface} implementation.  This provides a 
+ * <p>The basic foundation for a {@link ScriptStep} implementation.  This provides a 
  * handler for {@link #getIdentifier()}.  It also adds additional functionality though 
  * {@link #setGlobalParam(String, String)} and {@link #getGlobalParam(String)}.</p>
  * 
  * @author jent - Mike Jensen
  */
-public abstract class AbstractScriptStep implements ScriptStepInterface {
+public abstract class AbstractScriptStep implements ScriptStep {
   private static final Map<String, String> PARAMS = new ConcurrentHashMap<String, String>();
   
   /**
@@ -42,14 +42,14 @@ public abstract class AbstractScriptStep implements ScriptStepInterface {
     return StringUtils.nullToEmpty(PARAMS.get(key));
   }
   
-  private final String identifier;
+  private final LightCharSequence identifier;
   
   protected AbstractScriptStep(String identifier) {
-    this.identifier = StringUtils.nullToEmpty(identifier);
+    this.identifier = CharsDeduplicator.deDuplicate(StringUtils.nullToEmpty(identifier));
   }
   
   @Override
-  public String getIdentifier() {
+  public CharSequence getIdentifier() {
     return identifier;
   }
 }

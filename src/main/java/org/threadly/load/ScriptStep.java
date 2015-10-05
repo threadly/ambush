@@ -5,13 +5,13 @@ package org.threadly.load;
  * 
  * @author jent - Mike Jensen
  */
-public interface ScriptStepInterface {
+public interface ScriptStep {
   /**
    * Get the name or identifier that was provided at construction for this test step.
    * 
    * @return Script step name
    */
-  public String getIdentifier();
+  public CharSequence getIdentifier();
   
   /**
    * This must be implemented for the actual execution of the script step.  This invocation should 

@@ -38,7 +38,7 @@ public class ScriptRunnerBasicScriptTest {
     public ExecutableScript buildScript() {
       SequentialScriptBuilder scriptBuilder = new SequentialScriptBuilder();
 
-      scriptBuilder.addStep(new ScriptStepInterface() {
+      scriptBuilder.addStep(new ScriptStep() {
         @Override
         public String getIdentifier() {
           return "bool verifier";
@@ -49,7 +49,7 @@ public class ScriptRunnerBasicScriptTest {
           av.assertEquals(boolTestVal, getBoolValue(boolKey));
         }
       });
-      scriptBuilder.addStep(new ScriptStepInterface() {
+      scriptBuilder.addStep(new ScriptStep() {
         @Override
         public String getIdentifier() {
           return "int verifier";
@@ -60,7 +60,7 @@ public class ScriptRunnerBasicScriptTest {
           av.assertEquals(intTestVal, getIntValue(intKey));
         }
       });
-      scriptBuilder.addStep(new ScriptStepInterface() {
+      scriptBuilder.addStep(new ScriptStep() {
         @Override
         public String getIdentifier() {
           return "long verifier";
@@ -71,7 +71,7 @@ public class ScriptRunnerBasicScriptTest {
           av.assertEquals(longTestVal, getLongValue(longKey));
         }
       });
-      scriptBuilder.addStep(new ScriptStepInterface() {
+      scriptBuilder.addStep(new ScriptStep() {
         @Override
         public String getIdentifier() {
           return "double verifier";
@@ -82,7 +82,7 @@ public class ScriptRunnerBasicScriptTest {
           av.assertEquals(doubleTestVal, getDoubleValue(doubleKey));
         }
       });
-      scriptBuilder.addStep(new ScriptStepInterface() {
+      scriptBuilder.addStep(new ScriptStep() {
         @Override
         public String getIdentifier() {
           return "string verifier";
@@ -93,7 +93,7 @@ public class ScriptRunnerBasicScriptTest {
           av.assertEquals(stringTestVal, getStringValue(stringKey));
         }
       });
-      scriptBuilder.addStep(new ScriptStepInterface() {
+      scriptBuilder.addStep(new ScriptStep() {
         @Override
         public String getIdentifier() {
           return "end step";

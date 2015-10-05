@@ -71,7 +71,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
    * @param step Test step to be added
    */
   @Override
-  public void addStep(ScriptStepInterface step) {
+  public void addStep(ScriptStep step) {
     addStep(step, 1);
   }
   
@@ -82,7 +82,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
    * @param step Test step to be added
    * @param times Quantity of times this step should be ran concurrently
    */
-  public void addStep(ScriptStepInterface step, int times) {
+  public void addStep(ScriptStep step, int times) {
     verifyValid();
     incrementThreads(times);
     for (int i = 0; i < times; i++) {

@@ -10,15 +10,15 @@ import java.util.concurrent.TimeUnit;
  * @author jent - Mike Jensen
  */
 public class StepResult {
-  private final String description;
+  private final CharSequence description;
   private final long runTimeInNanos;
   private final Throwable error;
   
-  protected StepResult(String description, long runTimeInNanos) {
+  protected StepResult(CharSequence description, long runTimeInNanos) {
     this(description, runTimeInNanos, null);
   }
   
-  protected StepResult(String description, long runTimeInNanos, Throwable error) {
+  protected StepResult(CharSequence description, long runTimeInNanos, Throwable error) {
     this.description = description;
     this.runTimeInNanos = runTimeInNanos;
     this.error = error;
@@ -30,7 +30,7 @@ public class StepResult {
    * @return Description of ran test
    */
   public String getDescription() {
-    return description;
+    return description.toString();
   }
   
   /**

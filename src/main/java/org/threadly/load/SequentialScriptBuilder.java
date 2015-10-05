@@ -70,7 +70,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
    * @param step Test step to be added
    */
   @Override
-  public void addStep(ScriptStepInterface step) {
+  public void addStep(ScriptStep step) {
     addStep(new ScriptStepRunner(step));
   }
   
