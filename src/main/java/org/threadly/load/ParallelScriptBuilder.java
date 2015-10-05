@@ -156,7 +156,14 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
     @Override
     public void runChainItem(ExecutionAssistant assistant) {
       for (ExecutionItem chainItem : getSteps()) {
-        assistant.executeIfStillRunning(chainItem, true);
+        final ExecutionItem fChainItem = chainItem;
+        assistant.executeIfStillRunning(chainItem, true)
+                 .addListener(new Runnable() {
+                    @Override
+                    public void run() {
+                      FutureUtils.cancelIncompleteFutures(fChainItem.getFutures(), true);
+                    }
+                 });
       }
       // block till all parallel steps finish, or first error
       try {

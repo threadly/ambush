@@ -137,8 +137,15 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
         if (chainItem.manipulatesExecutionAssistant()) {
           assistant = assistant.makeCopy();
         }
+        final ExecutionItem fChainItem = chainItem;
         ListenableFuture<?> f = assistant.executeIfStillRunning(chainItem, false);
-        // block till execution is done
+        f.addListener(new Runnable() {
+          @Override
+          public void run() {
+            FutureUtils.cancelIncompleteFutures(fChainItem.getFutures(), true);
+          }
+        });
+        // block till execution is done (and also allow thread to do execution)
         try {
           f.get();
         } catch (InterruptedException e) {
