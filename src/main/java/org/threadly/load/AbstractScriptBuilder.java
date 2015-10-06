@@ -259,7 +259,7 @@ public abstract class AbstractScriptBuilder {
       if (items == null) {
         return Collections.<ExecutionItem>emptyList().iterator();
       } else {
-        return Collections.unmodifiableList(Arrays.asList(items)).iterator();
+        return Arrays.asList(items).iterator();
       }
     }
   }

@@ -138,6 +138,7 @@ public class ExecutableScript {
     private final AtomicBoolean running;
     private final AtomicReference<PriorityScheduler> scheduler;
     private final AtomicReference<List<ListenableFuture<StepResult>>> futures;
+    private volatile ListenableFuture<?> completionFuture;
     private volatile SubmitterExecutor limiter;
     
     private ScriptAssistant(ScriptAssistant scriptAssistant) {
@@ -145,12 +146,13 @@ public class ExecutableScript {
       scheduler = scriptAssistant.scheduler;
       futures = scriptAssistant.futures;
       limiter = scriptAssistant.limiter;
+      completionFuture = scriptAssistant.completionFuture;
       
       /* with the way FutureUtils works, the ListenableFuture made here wont be able to be 
        * garbage collected, even though we don't have a reference to it.  Thus ensuring we 
        * cleanup our running references.
        */
-      FutureUtils.makeCompleteFuture(futures.get()).addListener(new Runnable() {
+      completionFuture.addListener(new Runnable() {
         @Override
         public void run() {
           limiter = null;
@@ -177,7 +179,8 @@ public class ExecutableScript {
        * garbage collected, even though we don't have a reference to it.  Thus ensuring we 
        * cleanup our running references.
        */
-      FutureUtils.makeCompleteFuture(futures).addListener(new Runnable() {
+      completionFuture = FutureUtils.makeCompleteFuture(futures);
+      completionFuture.addListener(new Runnable() {
         @Override
         public void run() {
           scheduler.set(null);

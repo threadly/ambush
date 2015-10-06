@@ -16,7 +16,21 @@ public class CharSequenceChain implements CharSequence {
    * @param chain Chain of sequences that produces this sequence
    */
   public CharSequenceChain(CharSequence ... chain) {
-    this.chain = chain;
+    int index = 0;
+    CharSequence[] fooChain = new CharSequence[chain.length];
+    for (CharSequence cs : chain) {
+      if (cs.length() > 0) {
+        fooChain[index++] = cs;
+      }
+    }
+    
+    if (index == chain.length) {
+      this.chain = fooChain;
+    } else {
+      CharSequence[] newChain = new CharSequence[index];
+      System.arraycopy(fooChain, 0, newChain, 0, index);
+      this.chain = newChain;
+    }
   }
 
   @Override
