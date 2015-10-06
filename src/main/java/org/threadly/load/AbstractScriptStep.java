@@ -42,7 +42,17 @@ public abstract class AbstractScriptStep implements ScriptStep {
     return StringUtils.nullToEmpty(PARAMS.get(key));
   }
   
-  private final LightCharSequence identifier;
+  private final CharSequence identifier;
+  
+  protected AbstractScriptStep(CharSequence identifier) {
+    if (identifier instanceof String) {
+      this.identifier = CharsDeduplicator.deDuplicate((String)identifier);
+    } else if (identifier == null) {
+      this.identifier = "";
+    } else {
+      this.identifier = identifier;
+    }
+  }
   
   protected AbstractScriptStep(String identifier) {
     this.identifier = CharsDeduplicator.deDuplicate(StringUtils.nullToEmpty(identifier));
