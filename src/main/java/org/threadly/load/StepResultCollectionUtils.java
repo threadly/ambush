@@ -28,9 +28,9 @@ public class StepResultCollectionUtils {
    * @return Failed TestResult or {@code null} if no failures occurred
    * @throws InterruptedException Thrown if the thread is interrupted while waiting for {@link StepResult}
    */
-  public static StepResult getFailedResult(Collection<? extends Future<StepResult>> futures) 
+  public static StepResult getFailedResult(Collection<? extends Future<? extends StepResult>> futures) 
       throws InterruptedException {
-    Iterator<? extends Future<StepResult>> it = futures.iterator();
+    Iterator<? extends Future<? extends StepResult>> it = futures.iterator();
     while (it.hasNext()) {
       try {
         StepResult tr = it.next().get();
@@ -58,10 +58,10 @@ public class StepResultCollectionUtils {
    * @return Failed List of TestResult's that failed (collection will be empty if no failures occurred)
    * @throws InterruptedException Thrown if the thread is interrupted while waiting for {@link StepResult}
    */
-  public static List<StepResult> getAllFailedResults(Collection<? extends Future<StepResult>> futures) 
+  public static List<StepResult> getAllFailedResults(Collection<? extends Future<? extends StepResult>> futures) 
       throws InterruptedException {
     List<StepResult> result = new ArrayList<StepResult>(2);
-    Iterator<? extends Future<StepResult>> it = futures.iterator();
+    Iterator<? extends Future<? extends StepResult>> it = futures.iterator();
     while (it.hasNext()) {
       try {
         StepResult tr = it.next().get();
@@ -90,11 +90,11 @@ public class StepResultCollectionUtils {
    * @return Average nanoseconds spent per test step 
    * @throws InterruptedException Thrown if the thread is interrupted while waiting for {@link StepResult}
    */
-  public static double getAverageRuntime(Collection<? extends Future<StepResult>> futures, TimeUnit timeUnit) 
+  public static double getAverageRuntime(Collection<? extends Future<? extends StepResult>> futures, TimeUnit timeUnit) 
       throws InterruptedException {
     double count = 0;
     double totalNanos = 0;
-    Iterator<? extends Future<StepResult>> it = futures.iterator();
+    Iterator<? extends Future<? extends StepResult>> it = futures.iterator();
     while (it.hasNext()) {
       try {
         StepResult tr = it.next().get();
@@ -118,10 +118,10 @@ public class StepResultCollectionUtils {
    * @return TestResult which took the longest to execute in the set
    * @throws InterruptedException Thrown if the thread is interrupted while waiting for {@link StepResult}
    */
-  public static StepResult getLongestRuntimeStep(Collection<? extends Future<StepResult>> futures) 
+  public static StepResult getLongestRuntimeStep(Collection<? extends Future<? extends StepResult>> futures) 
       throws InterruptedException {
     StepResult longestStep = null;
-    Iterator<? extends Future<StepResult>> it = futures.iterator();
+    Iterator<? extends Future<? extends StepResult>> it = futures.iterator();
     while (it.hasNext()) {
       try {
         StepResult tr = it.next().get();

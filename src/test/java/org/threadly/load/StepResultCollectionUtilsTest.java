@@ -18,28 +18,28 @@ import org.threadly.concurrent.future.SettableListenableFuture;
 public class StepResultCollectionUtilsTest {
   private static final int PROCESSING_TIME_NANOS = 10;
   
-  private List<ListenableFuture<StepResult>> passFutures;
-  private List<StepResult> failResults;
-  private List<ListenableFuture<StepResult>> failFutures;
-  private List<ListenableFuture<StepResult>> futures;
+  private List<ListenableFuture<PassStepResult>> passFutures;
+  private List<ErrorStepResult> failResults;
+  private List<ListenableFuture<ErrorStepResult>> failFutures;
+  private List<ListenableFuture<? extends StepResult>> futures;
   
   @Before
   public void setup() {
-    passFutures = new ArrayList<ListenableFuture<StepResult>>(2);
-    passFutures.add(FutureUtils.immediateResultFuture(new StepResult("foo", PROCESSING_TIME_NANOS, null)));
-    passFutures.add(FutureUtils.immediateResultFuture(new StepResult("foo", PROCESSING_TIME_NANOS, null)));
+    passFutures = new ArrayList<ListenableFuture<PassStepResult>>(2);
+    passFutures.add(FutureUtils.immediateResultFuture(new PassStepResult("foo", PROCESSING_TIME_NANOS)));
+    passFutures.add(FutureUtils.immediateResultFuture(new PassStepResult("foo", PROCESSING_TIME_NANOS)));
     
-    failResults = new ArrayList<StepResult>(2);
-    failResults.add(new StepResult("foo", PROCESSING_TIME_NANOS, new Exception()));
-    failResults.add(new StepResult("foo", PROCESSING_TIME_NANOS, new Exception()));
+    failResults = new ArrayList<ErrorStepResult>(2);
+    failResults.add(new ErrorStepResult("foo", PROCESSING_TIME_NANOS, new Exception()));
+    failResults.add(new ErrorStepResult("foo", PROCESSING_TIME_NANOS, new Exception()));
     
-    failFutures = new ArrayList<ListenableFuture<StepResult>>(failResults.size());
-    Iterator<StepResult> it = failResults.iterator();
+    failFutures = new ArrayList<ListenableFuture<ErrorStepResult>>(failResults.size());
+    Iterator<ErrorStepResult> it = failResults.iterator();
     while (it.hasNext()) {
       failFutures.add(FutureUtils.immediateResultFuture(it.next()));
     }
     
-    futures = new ArrayList<ListenableFuture<StepResult>>();
+    futures = new ArrayList<ListenableFuture<? extends StepResult>>();
     futures.addAll(passFutures);
     futures.addAll(failFutures);
     
@@ -47,15 +47,15 @@ public class StepResultCollectionUtilsTest {
     SettableListenableFuture<StepResult> slf1 = new SettableListenableFuture<StepResult>();
     slf1.cancel(false);
     futures.add(slf1);
-    futures.add(FutureUtils.immediateResultFuture(new StepResult("foo", PROCESSING_TIME_NANOS, null)));
-    StepResult tr1 = new StepResult("foo", PROCESSING_TIME_NANOS, new Exception());
+    futures.add(FutureUtils.immediateResultFuture(new PassStepResult("foo", PROCESSING_TIME_NANOS)));
+    ErrorStepResult tr1 = new ErrorStepResult("foo", PROCESSING_TIME_NANOS, new Exception());
     failResults.add(tr1);
     failFutures.add(FutureUtils.immediateResultFuture(tr1));
     futures.add(failFutures.get(failFutures.size() - 1));
     SettableListenableFuture<StepResult> slf2 = new SettableListenableFuture<StepResult>();
     slf2.cancel(false);
     futures.add(slf2);
-    StepResult tr2 = new StepResult("foo", PROCESSING_TIME_NANOS, new Exception());
+    ErrorStepResult tr2 = new ErrorStepResult("foo", PROCESSING_TIME_NANOS, new Exception());
     failResults.add(tr2);
     failFutures.add(FutureUtils.immediateResultFuture(tr2));
     futures.add(failFutures.get(failFutures.size() - 1));
@@ -90,7 +90,7 @@ public class StepResultCollectionUtilsTest {
   
   @Test
   public void getLongestRuntimeStepPassStepTest() throws InterruptedException {
-    StepResult longResult = new StepResult("foo", PROCESSING_TIME_NANOS + 1);
+    StepResult longResult = new PassStepResult("foo", PROCESSING_TIME_NANOS + 1);
     futures.add(FutureUtils.immediateResultFuture(longResult));
     
     assertTrue(longResult == StepResultCollectionUtils.getLongestRuntimeStep(futures));
@@ -98,7 +98,7 @@ public class StepResultCollectionUtilsTest {
   
   @Test
   public void getLongestRuntimeStepFailStepTest() throws InterruptedException {
-    StepResult longResult = new StepResult("foo", PROCESSING_TIME_NANOS + 1, new Exception());
+    StepResult longResult = new ErrorStepResult("foo", PROCESSING_TIME_NANOS + 1, new Exception());
     futures.add(FutureUtils.immediateResultFuture(longResult));
     
     assertTrue(longResult == StepResultCollectionUtils.getLongestRuntimeStep(futures));
