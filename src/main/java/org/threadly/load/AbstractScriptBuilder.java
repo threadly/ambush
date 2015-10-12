@@ -577,6 +577,12 @@ public abstract class AbstractScriptBuilder {
     }
   }
   
+  /**
+   * <p>Runner to be added as a listener for when an execution item completes.  This runner is 
+   * just so that the complete action can be indicated to the original item.</p>
+   * 
+   * @author jent - Mike Jensen
+   */
   protected static class ExecutionItemCompletionRunner implements Runnable {
     private final ExecutionItem item;
     
