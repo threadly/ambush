@@ -158,6 +158,7 @@ public abstract class AbstractScriptBuilder {
    */
   public abstract AbstractScriptBuilder makeCopy();
   
+  // TODO - javadoc
   protected void maybeUpdatedMaximumThreads(int currentValue) {
     if (neededThreadCount < currentValue) {
       neededThreadCount = currentValue;
@@ -528,14 +529,14 @@ public abstract class AbstractScriptBuilder {
       
       future.setRunningThread(Thread.currentThread());
       
-      long startNanos = Clock.systemNanoTime();
+      long startNanos = Clock.accurateTimeNanos();
       StepResult result;
       try {
         scriptStep.runStep();
-        long endNanos = Clock.systemNanoTime();
+        long endNanos = Clock.accurateTimeNanos();
         result = new PassStepResult(scriptStep.getIdentifier(), endNanos - startNanos);
       } catch (Throwable t) {
-        long endNanos = Clock.systemNanoTime();
+        long endNanos = Clock.accurateTimeNanos();
         result = new ErrorStepResult(scriptStep.getIdentifier(), endNanos - startNanos, t);
       }
       future.setResult(result);
