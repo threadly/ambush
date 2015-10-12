@@ -24,7 +24,7 @@ import org.threadly.util.ArgumentVerifier;
  */
 public class ExecutableScript {
   protected final int neededThreadQty;
-  protected final ExecutionItem[] steps;
+  protected final ExecutionItem[] steps;  // nulled out as ran to allow garbage collection
   protected final ScriptAssistant scriptAssistant;
   
   /**
@@ -110,7 +110,8 @@ public class ExecutableScript {
     scriptAssistant.scheduler.get().execute(new Runnable() {
       @Override
       public void run() {
-        for (ExecutionItem step : steps) {
+        for (int i = 0; i < steps.length; i++) {
+          ExecutionItem step = steps[i];
           step.runChainItem(scriptAssistant);
           // this call will block till the step is done, thus preventing execution of the next step
           try {
@@ -121,6 +122,9 @@ public class ExecutableScript {
           } catch (InterruptedException e) {
             // let thread exit
             return;
+          } finally {
+            step.runComplete();
+            steps[i] = null;  // null out for available garbage collection
           }
         }
       }
@@ -256,6 +260,8 @@ public class ExecutableScript {
      */
     public void prepareForRun();
     
+    public void runComplete();
+
     /**
      * Run the current items execution.  This may execute async on the provided 
      * {@link ExecutionAssistant}, but returned futures from {@link #getFutures()} should not fully 

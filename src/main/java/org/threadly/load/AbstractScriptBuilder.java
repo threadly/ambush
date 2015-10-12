@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.threadly.concurrent.future.FutureUtils;
 import org.threadly.concurrent.future.ListenableFuture;
 import org.threadly.concurrent.future.SettableListenableFuture;
 import org.threadly.load.ExecutableScript.ExecutionItem;
@@ -344,6 +345,11 @@ public abstract class AbstractScriptBuilder {
     public void prepareForRun() {
       // nothing to do here
     }
+
+    @Override
+    public void runComplete() {
+      // nothing to do here
+    }
     
     @Override
     public List<? extends SettableListenableFuture<StepResult>> getFutures() {
@@ -387,6 +393,10 @@ public abstract class AbstractScriptBuilder {
      * @return Number of steps this collection runs
      */
     public int getStepCount() {
+      if (steps == null) {
+        throw new IllegalStateException("Run has completed");
+      }
+      
       return steps.length;
     }
     
@@ -396,12 +406,23 @@ public abstract class AbstractScriptBuilder {
      * @return Array of items which will be ran
      */
     public ExecutionItem[] getSteps() {
+      if (steps == null) {
+        throw new IllegalStateException("Run has completed");
+      }
+      
       return steps;
     }
 
     @Override
     public void prepareForRun() {
       futures.trimToSize();
+    }
+
+    @Override
+    public void runComplete() {
+      steps = null;
+      // TODO - do we need to cancel here?  In theory these were canceled when each step finished
+      FutureUtils.cancelIncompleteFutures(getFutures(), true);
     }
     
     private ExecutionItem[] makeStepsCopy(int extraEndSpace) {
@@ -416,6 +437,10 @@ public abstract class AbstractScriptBuilder {
      * @param item Item to be added, can not be {@code null}
      */
     public void addItem(ExecutionItem item) {
+      if (steps == null) {
+        throw new IllegalStateException("Run has completed");
+      }
+      
       futures.addAll(item.getFutures());
       
       ExecutionItem[] newSteps = makeStepsCopy(1);
@@ -429,6 +454,10 @@ public abstract class AbstractScriptBuilder {
      * @param items Items to be added, can not be {@code null}
      */
     public void addItems(ExecutionItem[] items) {
+      if (steps == null) {
+        throw new IllegalStateException("Run has completed");
+      }
+      
       if (items.length == 0) {
         return;
       }
@@ -449,11 +478,12 @@ public abstract class AbstractScriptBuilder {
     
     @Override
     public String toString() {
-      return Arrays.toString(steps);
+      return steps == null ? "CompletedStepCollection" : Arrays.toString(steps);
     }
 
     @Override
     public boolean manipulatesExecutionAssistant() {
+      // TODO - this one does not manipulate it, but do we need to report if any items we contain manipulate?
       return false;
     }
 
@@ -470,13 +500,13 @@ public abstract class AbstractScriptBuilder {
    * 
    * @author jent - Mike Jensen
    */
-  protected static class ScriptStepRunner extends SettableListenableFuture<StepResult>
-                                          implements ExecutionItem {
-    protected final ScriptStep scriptStep;
+  protected static class ScriptStepRunner implements ExecutionItem {
+    protected ScriptStep scriptStep;
+    protected SettableListenableFuture<StepResult> future;
     
     public ScriptStepRunner(ScriptStep scriptStep) {
-      super(false);
       this.scriptStep = scriptStep;
+      future = new SettableListenableFuture<StepResult>(false);
     }
 
     @Override
@@ -485,8 +515,18 @@ public abstract class AbstractScriptBuilder {
     }
 
     @Override
+    public void runComplete() {
+      scriptStep = null;
+      future.cancel(true);  // should be done anyways
+    }
+
+    @Override
     public void runChainItem(ExecutionAssistant assistant) {
-      setRunningThread(Thread.currentThread());
+      if (scriptStep == null) {
+        throw new IllegalStateException("Run has completed");
+      }
+      
+      future.setRunningThread(Thread.currentThread());
       
       long startNanos = Clock.systemNanoTime();
       StepResult result;
@@ -498,18 +538,21 @@ public abstract class AbstractScriptBuilder {
         long endNanos = Clock.systemNanoTime();
         result = new ErrorStepResult(scriptStep.getIdentifier(), endNanos - startNanos, t);
       }
-      setResult(result);
+      future.setResult(result);
     }
 
     @Override
     public ScriptStepRunner makeCopy() {
+      if (scriptStep == null) {
+        throw new IllegalStateException("Run has completed");
+      }
+      
       return new ScriptStepRunner(scriptStep);
     }
 
     @Override
     public List<SettableListenableFuture<StepResult>> getFutures() {
-      SettableListenableFuture<StepResult> slf = this;
-      return Collections.singletonList(slf);
+      return Collections.singletonList(future);
     }
 
     @Override
@@ -519,7 +562,7 @@ public abstract class AbstractScriptBuilder {
     
     @Override
     public String toString() {
-      return scriptStep.getIdentifier().toString();
+      return scriptStep == null ? "CompletedScriptStep" : scriptStep.getIdentifier().toString();
     }
 
     @Override
@@ -530,6 +573,19 @@ public abstract class AbstractScriptBuilder {
     @Override
     public boolean isChainExecutor() {
       return false;
+    }
+  }
+  
+  protected static class ExecutionItemCompletionRunner implements Runnable {
+    private final ExecutionItem item;
+    
+    public ExecutionItemCompletionRunner(ExecutionItem item) {
+      this.item = item;
+    }
+    
+    @Override
+    public void run() {
+      item.runComplete();
     }
   }
 }
