@@ -12,6 +12,7 @@ import org.threadly.concurrent.future.ListenableFuture;
 import org.threadly.concurrent.future.SettableListenableFuture;
 import org.threadly.load.ExecutableScript.ExecutionItem;
 import org.threadly.load.ExecutableScript.ExecutionItem.ChildItems;
+import org.threadly.util.ArgumentVerifier;
 import org.threadly.util.Clock;
 
 /**
@@ -412,6 +413,15 @@ public abstract class AbstractScriptBuilder {
       }
       
       return steps;
+    }
+    
+    protected void setSteps(ExecutionItem[] steps) {
+      ArgumentVerifier.assertNotNull(steps, "steps");
+      if (this.steps == null) {
+        throw new IllegalStateException("Run has completed");
+      }
+      
+      this.steps = steps;
     }
 
     @Override

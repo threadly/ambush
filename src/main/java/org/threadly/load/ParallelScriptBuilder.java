@@ -1,7 +1,13 @@
 package org.threadly.load;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Random;
+
 import org.threadly.concurrent.future.FutureUtils;
 import org.threadly.load.ExecutableScript.ExecutionItem;
+import org.threadly.util.Clock;
 
 /**
  * <p>A builder which's added steps will all be executed in parallel.</p>
@@ -169,6 +175,17 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
         // let thread exit
         return;
       }
+    }
+
+    @Override
+    public void prepareForRun() {
+      // shuffle steps so that the execution order is not biased
+      ExecutionItem[] steps = getSteps();
+      List<ExecutionItem> shuffledList = Arrays.asList(steps);
+      Collections.shuffle(shuffledList, new Random(Clock.accurateTimeNanos()));
+      setSteps(shuffledList.toArray(steps));
+      
+      super.prepareForRun();
     }
 
     @Override
