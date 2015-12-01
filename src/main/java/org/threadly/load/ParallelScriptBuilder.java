@@ -24,11 +24,6 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
    * {@link AbstractScriptBuilder#addSteps(ParallelScriptBuilder)}.
    */
   public ParallelScriptBuilder() {
-    this(null);
-  }
-  
-  protected ParallelScriptBuilder(AbstractScriptBuilder sourceBuilder) {
-    super(sourceBuilder);
     currentStep = new ParallelStep();
   }
 
@@ -48,27 +43,6 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
     }
     
     return result;
-  }
-
-  /**
-   * This is equivalent to calling {@link #inSequence()}.{@link #inParallel()}.  Switching to in 
-   * sequence and then back to inParallel result in having any steps added to the return instance 
-   * will not execute UNTILL ALL the steps already added to {@code this} instance have finished 
-   * (or ended in failure).
-   * 
-   * So UNLIKE {@link SequentialScriptBuilder#inSequence()}, this will NOT return the same 
-   * instance.
-   * 
-   * @return Builder which you can add additional test steps to run in parallel
-   */
-  @Override
-  public ParallelScriptBuilder inParallel() {
-    return inSequence().inParallel();
-  }
-  
-  @Override
-  public SequentialScriptBuilder inSequence() {
-    return new SequentialScriptBuilder(this);
   }
   
   /**

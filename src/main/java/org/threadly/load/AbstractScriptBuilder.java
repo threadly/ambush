@@ -27,15 +27,9 @@ public abstract class AbstractScriptBuilder {
   private int neededThreadCount;
   private Exception replacementException = null;
 
-  protected AbstractScriptBuilder(AbstractScriptBuilder sourceBuilder) {
-    if (sourceBuilder == null) {
-      stepRunners = new ArrayList<ExecutionItem>();
-      neededThreadCount = 1;
-    } else {
-      sourceBuilder.replaced();
-      this.stepRunners = sourceBuilder.stepRunners;
-      this.neededThreadCount = sourceBuilder.neededThreadCount;
-    }
+  protected AbstractScriptBuilder() {
+    stepRunners = new ArrayList<ExecutionItem>();
+    neededThreadCount = 1;
     this.finalized = new AtomicBoolean(false);
   }
   
@@ -78,30 +72,6 @@ public abstract class AbstractScriptBuilder {
   public void setMaxScriptStepRate(double stepsPerSecondLimit) {
     addStep(new RateAdjustmentStep(stepsPerSecondLimit));
   }
-
-  /**
-   * Get builder which will switch to parallel construction.  Steps added to the returned 
-   * builder will execute in parallel.  This returned parallel builders steps will not be 
-   * executed until ALL sequential steps from this builder are completed.
-   * 
-   * By requesting a sequential builder steps can no longer be added to THIS builder.  
-   * Attempting to do so will result in an {@link IllegalStateException}.
-   * 
-   * @return Builder which you can add additional test steps to run in parallel
-   */
-  public abstract ParallelScriptBuilder inParallel();
-  
-  /**
-   * Get builder which will switch to sequential construction.  Steps added to the returned 
-   * builder will execute one after the other.  This returned sequential builders steps will not 
-   * be executed until ALL parallel steps from this builder are completed.
-   * 
-   * By requesting a sequential builder steps can no longer be added to THIS builder.  
-   * Attempting to do so will result in an {@link IllegalStateException}.
-   * 
-   * @return Builder which you can add additional test steps to run sequentially
-   */
-  public abstract SequentialScriptBuilder inSequence();
 
   /**
    * Add a step to this builder.  For more specific step addition descriptions please see: 

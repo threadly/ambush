@@ -27,11 +27,6 @@ public class SequentialScriptBuilderTest {
   }
   
   @Test
-  public void inSequenceTest() {
-    assertTrue(sBuilder == sBuilder.inSequence());
-  }
-  
-  @Test
   public void addParallelStepsTest() throws InterruptedException {
     ParallelScriptBuilder pBuilder = new ParallelScriptBuilder();
     pBuilder.addStep(new TestStep(), 10);

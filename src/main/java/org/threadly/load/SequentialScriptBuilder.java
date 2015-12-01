@@ -21,11 +21,6 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
    * {@link AbstractScriptBuilder#addSteps(SequentialScriptBuilder)}.
    */
   public SequentialScriptBuilder() {
-    this(null);
-  }
-  
-  protected SequentialScriptBuilder(AbstractScriptBuilder sourceBuilder) {
-    super(sourceBuilder);
     currentStep = new SequentialStep();
   }
 
@@ -45,22 +40,6 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
     }
     
     return result;
-  }
-
-  /**
-   * The call to get a {@link SequentialScriptBuilder} from within an existing 
-   * {@link SequentialScriptBuilder} is a no-op.  So this will just return the reference to itself.
-   *   
-   * @return The same reference to this instance.
-   */
-  @Override
-  public SequentialScriptBuilder inSequence() {
-    return this;
-  }
-  
-  @Override
-  public ParallelScriptBuilder inParallel() {
-    return new ParallelScriptBuilder(this);
   }
   
   /**

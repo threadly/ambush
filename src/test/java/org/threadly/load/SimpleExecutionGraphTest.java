@@ -102,9 +102,13 @@ public class SimpleExecutionGraphTest {
   @Test
   public void inSequenceSectionsOfParallelTest() throws InterruptedException, TimeoutException, ExecutionException {
     final List<TestStep> parallelSteps1 = makeTestSteps(null, TEST_COMPLEXITY);
-    ParallelScriptBuilder builder = new ParallelScriptBuilder();
-    addSteps(parallelSteps1, builder);
-    builder = builder.inParallel();
+    ParallelScriptBuilder pBuilder = new ParallelScriptBuilder();
+    addSteps(parallelSteps1, pBuilder);
+    
+    SequentialScriptBuilder sBuilder = new SequentialScriptBuilder();
+    sBuilder.addSteps(pBuilder);
+    pBuilder = new ParallelScriptBuilder();
+    
     List<TestStep> parallelSteps2 = makeTestSteps(new Runnable() {
       @Override
       public void run() {
@@ -114,10 +118,12 @@ public class SimpleExecutionGraphTest {
         }
       }
     }, TEST_COMPLEXITY);
-    addSteps(parallelSteps2, builder);
+    
+    addSteps(parallelSteps2, pBuilder);
+    sBuilder.addSteps(pBuilder);
 
-    assertEquals(TEST_COMPLEXITY, builder.getNeededThreadCount());
-    List<? extends ListenableFuture<StepResult>> futures = builder.build().startScript();
+    assertEquals(TEST_COMPLEXITY + 1, sBuilder.getNeededThreadCount());
+    List<? extends ListenableFuture<StepResult>> futures = sBuilder.build().startScript();
     assertEquals(TEST_COMPLEXITY * 2, futures.size());
     
     FutureUtils.blockTillAllCompleteOrFirstError(futures, 10 * 1000);
@@ -154,12 +160,13 @@ public class SimpleExecutionGraphTest {
   @Test
   public void inSequenceSectionsOfParallelWithFailureTest() throws InterruptedException, ExecutionException {
     final List<TestStep> parallelSteps1 = makeTestSteps(null, TEST_COMPLEXITY);
-    AbstractScriptBuilder builder = new ParallelScriptBuilder();
-    addSteps(parallelSteps1, builder);
+    ParallelScriptBuilder pBuilder = new ParallelScriptBuilder();
+    addSteps(parallelSteps1, pBuilder);
     
-    builder = builder.inSequence();
-    builder.addStep(new FailureTestStep());
-    builder = builder.inParallel();
+    SequentialScriptBuilder sBuilder = new SequentialScriptBuilder();
+    sBuilder.addSteps(pBuilder);
+    sBuilder.addStep(new FailureTestStep());
+    pBuilder = new ParallelScriptBuilder();
     
     List<TestStep> parallelSteps2 = makeTestSteps(new Runnable() {
       @Override
@@ -170,9 +177,10 @@ public class SimpleExecutionGraphTest {
         }
       }
     }, TEST_COMPLEXITY);
-    addSteps(parallelSteps2, builder);
+    addSteps(parallelSteps2, pBuilder);
+    sBuilder.addSteps(pBuilder);
     
-    List<? extends ListenableFuture<StepResult>> futures = builder.build().startScript();
+    List<? extends ListenableFuture<StepResult>> futures = sBuilder.build().startScript();
     assertEquals(TEST_COMPLEXITY * 2 + 1, futures.size());
     
     for (int i = 0; i < futures.size(); i++) {
