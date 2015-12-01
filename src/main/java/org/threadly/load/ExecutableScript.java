@@ -23,6 +23,8 @@ import org.threadly.util.ArgumentVerifier;
  * @author jent - Mike Jensen
  */
 public class ExecutableScript {
+  private static final int MAXIMUM_PRESTART_THREAD_COUNT = 1000;
+  
   protected final int neededThreadQty;
   protected final ExecutionItem[] steps;  // nulled out as ran to allow garbage collection
   protected final ScriptAssistant scriptAssistant;
@@ -175,8 +177,19 @@ public class ExecutableScript {
       if (! running.compareAndSet(false, true)) {
         throw new IllegalStateException("Already running");
       }
-      scheduler.set(new PriorityScheduler(threadPoolSize));
-      scheduler.get().prestartAllThreads();
+      PriorityScheduler ps;
+      if (threadPoolSize > MAXIMUM_PRESTART_THREAD_COUNT) {
+        ps = new PriorityScheduler(1000);
+        // just prestart the maximum, then allow the pool to grow beyond that
+        // if rate limiting is used, our actual needed thread count may be lower than this number
+        ps.prestartAllThreads();
+        ps.setPoolSize(threadPoolSize);
+      } else {
+        ps = new PriorityScheduler(threadPoolSize);
+        ps.prestartAllThreads();
+      }
+      
+      scheduler.set(ps);
       this.futures.set(Collections.unmodifiableList(futures));
       
       /* with the way FutureUtils works, the ListenableFuture made here wont be able to be 
