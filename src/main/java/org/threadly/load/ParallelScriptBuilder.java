@@ -99,7 +99,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
     if (sequentialSteps.currentStep.getStepCount() == 0) {
       return;
     }
-    incrementThreads(sequentialSteps.getMaximumNeededThreadCount() + 1);
+    incrementThreads(sequentialSteps.getMaximumNeededThreadCount());
     currentStep.addItem(sequentialSteps.currentStep);
   }
   

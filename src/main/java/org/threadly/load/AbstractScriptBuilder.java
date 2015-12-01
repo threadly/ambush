@@ -90,7 +90,7 @@ public abstract class AbstractScriptBuilder {
    * {@link SequentialScriptBuilder#addSteps(SequentialScriptBuilder)} and 
    * {@link ParallelScriptBuilder#addSteps(SequentialScriptBuilder)}.
    * 
-   * @param sequentialSteps Test steps to be added to this builder
+   * @param sequentialSteps Script steps to be added to this builder
    */
   public abstract void addSteps(SequentialScriptBuilder sequentialSteps);
 
@@ -100,7 +100,7 @@ public abstract class AbstractScriptBuilder {
    * {@link SequentialScriptBuilder#addSteps(SequentialScriptBuilder)} and 
    * {@link ParallelScriptBuilder#addSteps(SequentialScriptBuilder)}.
    * 
-   * @param parallelSteps Test steps to be added to this builder
+   * @param parallelSteps Script steps to be added to this builder
    */
   public abstract void addSteps(ParallelScriptBuilder parallelSteps);
   

@@ -40,6 +40,12 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
     return result;
   }
   
+  @Override
+  public int getMaximumNeededThreadCount() {
+    // we must add one for the thread that is controlling the sequential execution
+    return super.getMaximumNeededThreadCount() + 1;
+  }
+  
   /**
    * Adds a step to be run sequentially.  This step will be ran after previously added steps have 
    * completed.
@@ -98,7 +104,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
     if (parallelSteps.currentStep.getStepCount() == 0) {
       return;
     }
-    maybeUpdatedMaximumThreads(parallelSteps.getMaximumNeededThreadCount() + 1);
+    maybeUpdatedMaximumThreads(parallelSteps.getMaximumNeededThreadCount());
     addStep(parallelSteps.currentStep);
   }
   
