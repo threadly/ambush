@@ -26,7 +26,7 @@ public class ExecutableScript {
   private static final int MAXIMUM_PRESTART_THREAD_COUNT = 1000;
   
   protected final int neededThreadQty;
-  protected final ExecutionItem[] steps;  // nulled out as ran to allow garbage collection
+  protected final ExecutionItem startExecutionItem;
   protected final ScriptAssistant scriptAssistant;
   
   /**
@@ -36,16 +36,16 @@ public class ExecutableScript {
    * Execution will not proceed to the next step until the previous step has fully completed.
    * 
    * @param neededThreadQty Minimum number of threads to execute provided steps
-   * @param steps Collection of steps which should be executed one after another
+   * @param startExecutionItem Execution item which represents the script
    */
-  public ExecutableScript(int neededThreadQty, List<ExecutionItem> steps) {
-    if (steps.isEmpty()) {
+  public ExecutableScript(int neededThreadQty, ExecutionItem startExecutionItem) {
+    if (! startExecutionItem.getChildItems().hasChildren()) {
       throw new IllegalArgumentException("Can not construct script with no steps");
     }
     ArgumentVerifier.assertGreaterThanZero(neededThreadQty, "neededThreadQty");
     
     this.neededThreadQty = neededThreadQty;
-    this.steps = steps.toArray(new ExecutionItem[steps.size()]);
+    this.startExecutionItem = startExecutionItem;
     scriptAssistant = new ScriptAssistant();
   }
   
@@ -56,24 +56,6 @@ public class ExecutableScript {
    */
   public int getThreadQtyNeeded() {
     return neededThreadQty;
-  }
-  
-  /**
-   * Creates a copy of the {@link ExecutionItem} chain.  This could be provided to 
-   * {@link #ExecutableScript(int, List)} to produce another runnable script.
-   *  
-   * @return Copy of execution graph
-   */
-  public List<ExecutionItem> makeItemsCopy() {
-    ArrayList<ExecutionItem> result = new ArrayList<ExecutionItem>(steps.length);
-    for (ExecutionItem step : steps) {
-      ExecutionItem copy = step.makeCopy();
-      if (copy != null) {
-        result.add(copy);
-      }
-    }
-    result.trimToSize();
-    return result;
   }
   
   /**
@@ -94,11 +76,10 @@ public class ExecutableScript {
    * @return A collection of futures which will represent each execution step
    */
   public List<ListenableFuture<StepResult>> startScript() {
-    ArrayList<ListenableFuture<StepResult>> result = new ArrayList<ListenableFuture<StepResult>>();
-    for (ExecutionItem step : steps) {
-      step.prepareForRun();
-      result.addAll(step.getFutures());
-    }
+    // copy result list to handle generics madness
+    final ArrayList<ListenableFuture<StepResult>> result = new ArrayList<ListenableFuture<StepResult>>();
+    startExecutionItem.prepareForRun();
+    result.addAll(startExecutionItem.getFutures());
     result.trimToSize();
     
     CharsDeduplicator.clearCache();
@@ -112,22 +93,18 @@ public class ExecutableScript {
     scriptAssistant.scheduler.get().execute(new Runnable() {
       @Override
       public void run() {
-        for (int i = 0; i < steps.length; i++) {
-          ExecutionItem step = steps[i];
-          step.runChainItem(scriptAssistant);
-          // this call will block till the step is done, thus preventing execution of the next step
-          try {
-            if (StepResultCollectionUtils.getFailedResult(step.getFutures()) != null) {
-              FutureUtils.cancelIncompleteFutures(scriptAssistant.getGlobalRunningFutureSet(), true);
-              return;
-            }
-          } catch (InterruptedException e) {
-            // let thread exit
+        startExecutionItem.runChainItem(scriptAssistant);
+        // this call will block till the step is done, thus preventing execution of the next step
+        try {
+          if (StepResultCollectionUtils.getFailedResult(result) != null) {
+            FutureUtils.cancelIncompleteFutures(scriptAssistant.getGlobalRunningFutureSet(), true);
             return;
-          } finally {
-            step.runComplete();
-            steps[i] = null;  // null out for available garbage collection
           }
+        } catch (InterruptedException e) {
+          // let thread exit
+          return;
+        } finally {
+          startExecutionItem.runComplete();
         }
       }
     });
@@ -324,7 +301,7 @@ public class ExecutableScript {
      * 
      * @author jent - Mike Jensen
      */
-    public interface ChildItems {
+    public interface ChildItems extends Iterable<ExecutionItem> {
       /**
        * Check to know if this item runs child items sequentially, waiting till one finishes 
        * before starting the next one.
@@ -346,6 +323,7 @@ public class ExecutableScript {
        * 
        * @return Iterator of items that will be executed when this item is executed
        */
+      @Override
       public Iterator<ExecutionItem> iterator();
     }
     

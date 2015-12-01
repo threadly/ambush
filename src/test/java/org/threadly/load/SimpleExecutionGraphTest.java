@@ -122,8 +122,8 @@ public class SimpleExecutionGraphTest {
     addSteps(parallelSteps2, pBuilder);
     sBuilder.addSteps(pBuilder);
 
-    assertEquals(TEST_COMPLEXITY + 1, sBuilder.getNeededThreadCount());
-    List<? extends ListenableFuture<StepResult>> futures = sBuilder.build().startScript();
+    assertEquals(TEST_COMPLEXITY + 1, sBuilder.getMaximumNeededThreadCount());
+    List<ListenableFuture<StepResult>> futures = sBuilder.build().startScript();
     assertEquals(TEST_COMPLEXITY * 2, futures.size());
     
     FutureUtils.blockTillAllCompleteOrFirstError(futures, 10 * 1000);
@@ -150,7 +150,7 @@ public class SimpleExecutionGraphTest {
     sBuilder.addSteps(pBuilder1);
     sBuilder.addSteps(pBuilder2);
 
-    assertEquals(TEST_COMPLEXITY + 1, sBuilder.getNeededThreadCount());
+    assertEquals(TEST_COMPLEXITY + 1, sBuilder.getMaximumNeededThreadCount());
     List<? extends ListenableFuture<StepResult>> futures = sBuilder.build().startScript();
     assertEquals(TEST_COMPLEXITY * 2, futures.size());
     
@@ -180,7 +180,7 @@ public class SimpleExecutionGraphTest {
     addSteps(parallelSteps2, pBuilder);
     sBuilder.addSteps(pBuilder);
     
-    List<? extends ListenableFuture<StepResult>> futures = sBuilder.build().startScript();
+    List<ListenableFuture<StepResult>> futures = sBuilder.build().startScript();
     assertEquals(TEST_COMPLEXITY * 2 + 1, futures.size());
     
     for (int i = 0; i < futures.size(); i++) {
@@ -192,7 +192,7 @@ public class SimpleExecutionGraphTest {
       } else {
         try {
           futures.get(i).get();
-          fail("Exception should have thrown");
+          fail("Exception should have thrown: " + i);
         } catch (CancellationException e) {
           // expected
         }
@@ -212,7 +212,7 @@ public class SimpleExecutionGraphTest {
     pBuilder.addSteps(sBuilder1);
     pBuilder.addSteps(sBuilder2);
     
-    assertEquals(4, pBuilder.getNeededThreadCount());
+    assertEquals(4, pBuilder.getMaximumNeededThreadCount());
     List<? extends ListenableFuture<StepResult>> futures = pBuilder.build().startScript();
     assertEquals(TEST_COMPLEXITY * 2, futures.size());
     

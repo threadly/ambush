@@ -22,7 +22,7 @@ public class ParallelScriptBuilderTest {
     
     pBuilder.addSteps(pBuilder2);
     
-    assertEquals(TEST_COMPLEXITY * 2, pBuilder.getNeededThreadCount());
+    assertEquals(TEST_COMPLEXITY * 2, pBuilder.getMaximumNeededThreadCount());
     List<? extends ListenableFuture<StepResult>> futures = pBuilder.build().startScript();
     assertEquals(TEST_COMPLEXITY * 2, futures.size());
     
@@ -38,7 +38,7 @@ public class ParallelScriptBuilderTest {
     
     pBuilder.addSteps(sBuilder);
     
-    assertEquals(TEST_COMPLEXITY + 2, pBuilder.getNeededThreadCount());
+    assertEquals(TEST_COMPLEXITY + 2, pBuilder.getMaximumNeededThreadCount());
     List<? extends ListenableFuture<StepResult>> futures = pBuilder.build().startScript();
     assertEquals(TEST_COMPLEXITY * 2, futures.size());
     

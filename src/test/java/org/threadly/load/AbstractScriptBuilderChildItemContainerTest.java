@@ -10,8 +10,8 @@ import org.threadly.load.ExecutableScript.ExecutionItem;
 public class AbstractScriptBuilderChildItemContainerTest {
   @Test
   public void emptyConstructorTest() {
-    assertNull(new ChildItemContainer().items);
-    assertTrue(new ChildItemContainer().itemsRunSequential());
+    assertNull(ChildItemContainer.EMPTY_CHILD_ITEMS_CONTAINER.items);
+    assertTrue(ChildItemContainer.EMPTY_CHILD_ITEMS_CONTAINER.itemsRunSequential());
   }
   
   @Test
@@ -24,13 +24,14 @@ public class AbstractScriptBuilderChildItemContainerTest {
   
   @Test
   public void hasChildrenTest() {
-    assertTrue(new ChildItemContainer(new ExecutionItem[0], false).hasChildren());
-    assertFalse(new ChildItemContainer().hasChildren());
+    assertFalse(new ChildItemContainer(new ExecutionItem[0], false).hasChildren());
+    assertFalse(ChildItemContainer.EMPTY_CHILD_ITEMS_CONTAINER.hasChildren());
+    assertTrue(new ChildItemContainer(new ExecutionItem[] { null }, false).hasChildren());
   }
   
   @Test
   public void iteratorTest() {
-    assertFalse(new ChildItemContainer().iterator().hasNext());
+    assertFalse(ChildItemContainer.EMPTY_CHILD_ITEMS_CONTAINER.iterator().hasNext());
     assertTrue(new ChildItemContainer(new ExecutionItem[1], false).iterator().hasNext());
   }
 }

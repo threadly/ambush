@@ -5,8 +5,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.threadly.concurrent.future.FutureUtils;
 import org.threadly.concurrent.future.ListenableFuture;
 import org.threadly.concurrent.future.SettableListenableFuture;
@@ -22,15 +20,11 @@ import org.threadly.util.Clock;
  * @author jent - Mike Jensen
  */
 public abstract class AbstractScriptBuilder {
-  protected final ArrayList<ExecutionItem> stepRunners;
-  private final AtomicBoolean finalized;
   private int neededThreadCount;
   private Exception replacementException = null;
 
   protected AbstractScriptBuilder() {
-    stepRunners = new ArrayList<ExecutionItem>();
     neededThreadCount = 1;
-    this.finalized = new AtomicBoolean(false);
   }
   
   /**
@@ -131,11 +125,13 @@ public abstract class AbstractScriptBuilder {
   
   /**
    * Call to check how many threads this script will need to execute at the current build point.  
-   * This can give you an idea of how intensely parallel this script is.
+   * This can give you an idea of how intensely parallel this script is.  Though it should be known 
+   * that less threads may be started than this.  If the rate limiting is being used, depending 
+   * on how fast test steps are completing not all threads may be used. 
    * 
    * @return Number of threads to run script at it's most parallel point
    */
-  public int getNeededThreadCount() {
+  public int getMaximumNeededThreadCount() {
     return neededThreadCount;
   }
   
@@ -156,28 +152,19 @@ public abstract class AbstractScriptBuilder {
   }
   
   /**
-   * Finalizes the script construction if it has not already finalized.  This is not the same as {@link #replaced}
+   * Returns this step as an execution item.  This is needed for when combining script chains into 
+   * a single start point.
+   * 
+   * @return The script step as an ExecutionItem
    */
-  private void maybeFinalize() {
-    verifyNotReplaced();
-    if (! finalized.getAndSet(true)) {
-      finalizeStep();
-      stepRunners.trimToSize();
-    }
-  }
-  
-  /**
-   * Called when the step is about to be either executed or replaced.  This finalizes the step 
-   * to add it to the execution chain if it makes sense to do so.
-   */
-  protected abstract void finalizeStep();
+  protected abstract ExecutionItem getStepAsExecutionItem();
   
   /**
    * Marks this builder as replaced.  Once replaced no operations can continue to happen on this 
    * builder.  All further building must be done on the builder which is replacing this one.
    */
   protected void replaced() {
-    maybeFinalize();
+    verifyNotReplaced();
     replacementException = new Exception();
   }
   
@@ -187,9 +174,6 @@ public abstract class AbstractScriptBuilder {
    */
   protected void verifyValid() {
     verifyNotReplaced();
-    if (finalized.get()) {
-      throw new IllegalStateException("Script finalized");
-    }
   }
   
   /**
@@ -210,11 +194,8 @@ public abstract class AbstractScriptBuilder {
    * @return A script which can be started
    */
   public ExecutableScript build() {
-    maybeFinalize();
-    if (stepRunners.isEmpty()) {
-      throw new IllegalStateException("No steps added to script to build");
-    }
-    return new ExecutableScript(neededThreadCount, stepRunners);
+    replaced();
+    return new ExecutableScript(neededThreadCount, getStepAsExecutionItem());
   }
   
   /**
@@ -224,10 +205,12 @@ public abstract class AbstractScriptBuilder {
    * @author jent - Mike Jensen
    */
   protected static class ChildItemContainer implements ChildItems {
+    protected static final ChildItemContainer EMPTY_CHILD_ITEMS_CONTAINER = new ChildItemContainer();
+    
     protected final ExecutionItem[] items;
     protected final boolean runSequentially;
     
-    protected ChildItemContainer() {
+    private ChildItemContainer() {
       this(null, true);
     }
     
@@ -243,15 +226,15 @@ public abstract class AbstractScriptBuilder {
 
     @Override
     public boolean hasChildren() {
-      return items != null;
+      return items != null && items.length > 0;
     }
 
     @Override
     public Iterator<ExecutionItem> iterator() {
-      if (items == null) {
-        return Collections.<ExecutionItem>emptyList().iterator();
-      } else {
+      if (hasChildren()) {
         return Arrays.asList(items).iterator();
+      } else {
+        return Collections.<ExecutionItem>emptyList().iterator();
       }
     }
   }
@@ -354,7 +337,7 @@ public abstract class AbstractScriptBuilder {
 
     @Override
     public ChildItems getChildItems() {
-      return new ChildItemContainer();
+      return ChildItemContainer.EMPTY_CHILD_ITEMS_CONTAINER;
     }
 
     @Override
@@ -557,7 +540,7 @@ public abstract class AbstractScriptBuilder {
 
     @Override
     public ChildItems getChildItems() {
-      return new ChildItemContainer();
+      return ChildItemContainer.EMPTY_CHILD_ITEMS_CONTAINER;
     }
     
     @Override

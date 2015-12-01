@@ -28,10 +28,8 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
   }
 
   @Override
-  protected void finalizeStep() {
-    if (currentStep.getStepCount() > 0) {
-      stepRunners.add(currentStep);
-    }
+  protected ExecutionItem getStepAsExecutionItem() {
+    return currentStep;
   }
   
   @Override
@@ -101,7 +99,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
     if (sequentialSteps.currentStep.getStepCount() == 0) {
       return;
     }
-    incrementThreads(sequentialSteps.getNeededThreadCount() + 1);
+    incrementThreads(sequentialSteps.getMaximumNeededThreadCount() + 1);
     currentStep.addItem(sequentialSteps.currentStep);
   }
   
@@ -123,7 +121,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
     if (parallelSteps.currentStep.getStepCount() == 0) {
       return;
     }
-    incrementThreads(parallelSteps.getNeededThreadCount());
+    incrementThreads(parallelSteps.getMaximumNeededThreadCount());
     currentStep.addItems(parallelSteps.currentStep.getSteps());
   }
   

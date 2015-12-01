@@ -25,10 +25,8 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
   }
 
   @Override
-  protected void finalizeStep() {
-    if (currentStep.getStepCount() > 0) {
-      stepRunners.add(currentStep);
-    }
+  protected ExecutionItem getStepAsExecutionItem() {
+    return currentStep;
   }
   
   @Override
@@ -77,7 +75,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
     if (sequentialSteps.currentStep.getStepCount() == 0) {
       return;
     }
-    maybeUpdatedMaximumThreads(sequentialSteps.getNeededThreadCount());
+    maybeUpdatedMaximumThreads(sequentialSteps.getMaximumNeededThreadCount());
     currentStep.addItems(sequentialSteps.currentStep.getSteps());
   }
   
@@ -100,7 +98,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
     if (parallelSteps.currentStep.getStepCount() == 0) {
       return;
     }
-    maybeUpdatedMaximumThreads(parallelSteps.getNeededThreadCount() + 1);
+    maybeUpdatedMaximumThreads(parallelSteps.getMaximumNeededThreadCount() + 1);
     addStep(parallelSteps.currentStep);
   }
   
