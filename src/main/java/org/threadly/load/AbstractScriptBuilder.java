@@ -141,6 +141,25 @@ public abstract class AbstractScriptBuilder {
   public abstract void addSteps(ParallelScriptBuilder parallelSteps);
   
   /**
+   * Adds steps for an unknown builder type.  This does instance of checks and defers to either 
+   * {@link #addSteps(ParallelScriptBuilder)} or {@link #addSteps(SequentialScriptBuilder)}.
+   * 
+   * @param scriptBuilder Script builder to add steps from
+   */
+  public void addSteps(AbstractScriptBuilder scriptBuilder) {
+    if (scriptBuilder == null) {
+      return;
+    } else if (scriptBuilder instanceof SequentialScriptBuilder) {
+      addSteps((SequentialScriptBuilder)scriptBuilder);
+    } else if (scriptBuilder instanceof ParallelScriptBuilder) {
+      addSteps((ParallelScriptBuilder)scriptBuilder);
+    } else {
+      throw new UnsupportedOperationException("Provided an unknown builder type: " + 
+                                                scriptBuilder.getClass());
+    }
+  }
+  
+  /**
    * Call to check how many threads this script will need to execute at the current build point.  
    * This can give you an idea of how intensely parallel this script is.
    * 
