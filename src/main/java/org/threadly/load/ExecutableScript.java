@@ -93,7 +93,7 @@ public class ExecutableScript {
     scriptAssistant.scheduler.get().execute(new Runnable() {
       @Override
       public void run() {
-        startExecutionItem.runChainItem(scriptAssistant);
+        startExecutionItem.itemReadyForExecution(scriptAssistant);
         // this call will block till the step is done, thus preventing execution of the next step
         try {
           if (StepResultCollectionUtils.getFailedResult(result) != null) {
@@ -203,7 +203,7 @@ public class ExecutableScript {
             scheduler.execute(result);
             return result;
           } else {
-            item.runChainItem(this);
+            item.itemReadyForExecution(this);
           }
         }
       }
@@ -214,7 +214,7 @@ public class ExecutableScript {
       return new Runnable() {
         @Override
         public void run() {
-          item.runChainItem(ScriptAssistant.this);
+          item.itemReadyForExecution(ScriptAssistant.this);
         }
       };
     }
@@ -245,21 +245,31 @@ public class ExecutableScript {
    */
   protected interface ExecutionItem {
     /**
+     * Set a handler for when {@link #itemReadyForExecution(ExecutionAssistant)} is invoked.  If a handler 
+     * is set on a step, it is expected to defer to that handler, and NOT perform any further 
+     * action.
+     * 
+     * @param handler Handler to defer to, or {@code null} to unset handler
+     */
+    public void setStartHandler(StepStartHandler handler);
+    
+    /**
      * Called to allow the {@link ExecutionItem} do any cleanup, or other operations needed to 
-     * ensure a smooth invocation of {@link #runChainItem(ExecutionAssistant)}.
+     * ensure a smooth invocation of {@link #itemReadyForExecution(ExecutionAssistant)}.
      */
     public void prepareForRun();
     
     public void runComplete();
 
     /**
-     * Run the current items execution.  This may execute async on the provided 
-     * {@link ExecutionAssistant}, but returned futures from {@link #getFutures()} should not fully 
-     * complete until the chain item completes.
+     * Indicates the item is ready for execution.  If a {@link StepStartHandler} is set, this 
+     * invocation should defer to that.  If it is not set, then the items execution should start.  
+     * This may execute async on the provided {@link ExecutionAssistant}, but returned futures 
+     * from {@link #getFutures()} should not complete until the chain item completes.
      * 
      * @param assistant {@link ExecutionAssistant} which is performing the execution
      */
-    public void runChainItem(ExecutionAssistant assistant);
+    public void itemReadyForExecution(ExecutionAssistant assistant);
     
     /**
      * Check if this execution item directly applies changes to the provided 
@@ -269,7 +279,13 @@ public class ExecutableScript {
      */
     public boolean manipulatesExecutionAssistant();
     
-    // TODO - javadoc
+    /**
+     * Check to see if this {@link ExecutionItem} is responsible for executing other items.  A 
+     * {@code true} here would indicate this is not a real step, but rather a point in the chain 
+     * needed for the graph structure.
+     * 
+     * @return {@code true} if synthetic step for chain execution
+     */
     public boolean isChainExecutor();
 
     /**
@@ -293,6 +309,7 @@ public class ExecutableScript {
      * 
      * @return A implementation of {@link ChildItems} to understand child execution
      */
+    // TODO - I don't like how we are constructing objects for this, can we avoid these calls?
     public ChildItems getChildItems();
     
     /**
@@ -370,6 +387,25 @@ public class ExecutableScript {
        * @return A new assistant instance
        */
       public ExecutionAssistant makeCopy();
+    }
+    
+    /**
+     * <p>Interface to be invoked if set on a step at start.  This can be used for multiple 
+     * reasons, one may to just get an indication that a step is ready to execute.  Another may be 
+     * to set a pre-run condition.  Meaning that this could prevent step execution, and just be 
+     * invoked to indicate that a step is ready to execute.</p>
+     * 
+     * @author jent - Mike Jensen
+     */
+    public interface StepStartHandler {
+      /**
+       * Invoked by the {@link ExecutionItem} when 
+       * {@link ExecutionItem#itemReadyForExecution(ExecutionAssistant)} is invoked.
+       * 
+       * @param step Step which is being invoked
+       * @param assistant Assistant the step is being invoked with
+       */
+      public void readyToRun(ExecutionItem step, ExecutionAssistant assistant);
     }
   }
 }

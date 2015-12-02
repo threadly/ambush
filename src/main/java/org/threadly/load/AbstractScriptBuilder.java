@@ -5,11 +5,13 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+
 import org.threadly.concurrent.future.FutureUtils;
 import org.threadly.concurrent.future.ListenableFuture;
 import org.threadly.concurrent.future.SettableListenableFuture;
 import org.threadly.load.ExecutableScript.ExecutionItem;
 import org.threadly.load.ExecutableScript.ExecutionItem.ChildItems;
+import org.threadly.load.ExecutableScript.ExecutionItem.StepStartHandler;
 import org.threadly.util.ArgumentVerifier;
 import org.threadly.util.Clock;
 
@@ -21,10 +23,11 @@ import org.threadly.util.Clock;
  */
 public abstract class AbstractScriptBuilder {
   private int neededThreadCount;
-  private Exception replacementException = null;
+  private Exception replacementException;
 
   protected AbstractScriptBuilder() {
     neededThreadCount = 1;
+    replacementException = null;
   }
   
   /**
@@ -144,7 +147,12 @@ public abstract class AbstractScriptBuilder {
    */
   public abstract AbstractScriptBuilder makeCopy();
   
-  // TODO - javadoc
+  /**
+   * Call to tell builder that a new possible thread maximum has been observed.  If this maximum is 
+   * higher than we are already tracking then we will update our tracked value.
+   * 
+   * @param currentValue New observed needed thread count
+   */
   protected void maybeUpdatedMaximumThreads(int currentValue) {
     if (neededThreadCount < currentValue) {
       neededThreadCount = currentValue;
@@ -158,6 +166,32 @@ public abstract class AbstractScriptBuilder {
    * @return The script step as an ExecutionItem
    */
   protected abstract ExecutionItem getStepAsExecutionItem();
+
+  /**
+   * Sets a {@link StepStartHandler} on all contained and child steps.  This does NOT set the 
+   * handler on any chain runners, only real execution steps.  This should defer to 
+   * {@link #setStartHandler(ChildItems, StepStartHandler)}.
+   * 
+   * @param startHandler Handler to apply to entire step chain
+   */
+  protected abstract void setStartHandlerOnAllSteps(StepStartHandler startHandler);
+  
+  /**
+   * Static call to traverse all child items tree to set the start handler for all items.  Chain 
+   * executors will NOT be set, but their children will be.
+   * 
+   * @param items Child items to start traversal from
+   * @param startHandler Handler to apply to all items
+   */
+  protected static void setStartHandler(ChildItems items, StepStartHandler startHandler) {
+    for (ExecutionItem ei : items) {
+      if (ei.isChainExecutor()) {
+        setStartHandler(ei.getChildItems(), startHandler);
+      } else {
+        ei.setStartHandler(startHandler);
+      }
+    }
+  }
   
   /**
    * Marks this builder as replaced.  Once replaced no operations can continue to happen on this 
@@ -252,7 +286,7 @@ public abstract class AbstractScriptBuilder {
     }
     
     @Override
-    public void runChainItem(ExecutionAssistant assistant) {
+    protected void runItem(ExecutionAssistant assistant) {
       assistant.setStepPerSecondLimit(newRateLimit);
     }
 
@@ -280,7 +314,7 @@ public abstract class AbstractScriptBuilder {
     }
 
     @Override
-    public void runChainItem(ExecutionAssistant assistant) {
+    protected void runItem(ExecutionAssistant assistant) {
       try {
         List<? extends ListenableFuture<?>> scriptFutures = assistant.getGlobalRunningFutureSet();
         double doneCount = 0;
@@ -314,7 +348,7 @@ public abstract class AbstractScriptBuilder {
    * 
    * @author jent - Mike Jensen
    */
-  protected abstract static class GhostExecutionItem implements ExecutionItem {
+  protected abstract static class GhostExecutionItem extends AbstractExecutionItem {
     @Override
     public void prepareForRun() {
       // nothing to do here
@@ -352,7 +386,7 @@ public abstract class AbstractScriptBuilder {
    * 
    * @author jent - Mike Jensen
    */
-  protected abstract static class StepCollectionRunner implements ExecutionItem {
+  protected abstract static class StepCollectionRunner extends AbstractExecutionItem {
     private final ArrayList<SettableListenableFuture<StepResult>> futures;
     private ExecutionItem[] steps;
     
@@ -483,7 +517,7 @@ public abstract class AbstractScriptBuilder {
    * 
    * @author jent - Mike Jensen
    */
-  protected static class ScriptStepRunner implements ExecutionItem {
+  protected static class ScriptStepRunner extends AbstractExecutionItem {
     protected ScriptStep scriptStep;
     protected SettableListenableFuture<StepResult> future;
     
@@ -504,7 +538,7 @@ public abstract class AbstractScriptBuilder {
     }
 
     @Override
-    public void runChainItem(ExecutionAssistant assistant) {
+    protected void runItem(ExecutionAssistant assistant) {
       if (scriptStep == null) {
         throw new IllegalStateException("Run has completed");
       }
@@ -557,6 +591,36 @@ public abstract class AbstractScriptBuilder {
     public boolean isChainExecutor() {
       return false;
     }
+  }
+  
+  /**
+   * <p>Abstract implementation of {@link ExecutionItem} for common implementation.  One example 
+   * of such common implementation is how the {@link StepStartHandler} behavior is handled.</p>
+   * 
+   * @author jent - Mike Jensen
+   */
+  protected abstract static class AbstractExecutionItem implements ExecutionItem {
+    private StepStartHandler handler = null;
+
+    @Override
+    public void setStartHandler(StepStartHandler handler) {
+      if (this.handler != null) {
+        // TODO - do we need to handle multiple start handlers?  The cost is memory
+        throw new IllegalStateException("Pre-run condition already set");
+      }
+      this.handler = handler;
+    }
+    
+    @Override
+    public final void itemReadyForExecution(ExecutionAssistant assistant) {
+      if (handler != null) {
+        handler.readyToRun(this, assistant);
+      } else {
+        runItem(assistant);
+      }
+    }
+    
+    protected abstract void runItem(ExecutionAssistant assistant);
   }
   
   /**

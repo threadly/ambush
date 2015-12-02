@@ -5,6 +5,7 @@ import java.util.concurrent.ExecutionException;
 import org.threadly.concurrent.future.FutureUtils;
 import org.threadly.concurrent.future.ListenableFuture;
 import org.threadly.load.ExecutableScript.ExecutionItem;
+import org.threadly.load.ExecutableScript.ExecutionItem.StepStartHandler;
 import org.threadly.util.ExceptionUtils;
 
 /**
@@ -27,6 +28,11 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
   @Override
   protected ExecutionItem getStepAsExecutionItem() {
     return currentStep;
+  }
+
+  @Override
+  protected void setStartHandlerOnAllSteps(StepStartHandler startHandler) {
+    setStartHandler(currentStep.getChildItems(), startHandler);
   }
   
   @Override
@@ -115,7 +121,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
    */
   protected static class SequentialStep extends StepCollectionRunner {
     @Override
-    public void runChainItem(ExecutionAssistant assistant) {
+    protected void runItem(ExecutionAssistant assistant) {
       for (ExecutionItem chainItem : getSteps()) {
         if (chainItem.manipulatesExecutionAssistant()) {
           assistant = assistant.makeCopy();

@@ -7,6 +7,7 @@ import java.util.Random;
 
 import org.threadly.concurrent.future.FutureUtils;
 import org.threadly.load.ExecutableScript.ExecutionItem;
+import org.threadly.load.ExecutableScript.ExecutionItem.StepStartHandler;
 import org.threadly.util.Clock;
 
 /**
@@ -30,6 +31,11 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
   @Override
   protected ExecutionItem getStepAsExecutionItem() {
     return currentStep;
+  }
+
+  @Override
+  protected void setStartHandlerOnAllSteps(StepStartHandler startHandler) {
+    setStartHandler(currentStep.getChildItems(), startHandler);
   }
   
   @Override
@@ -132,7 +138,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
    */
   protected static class ParallelStep extends StepCollectionRunner {
     @Override
-    public void runChainItem(ExecutionAssistant assistant) {
+    protected void runItem(ExecutionAssistant assistant) {
       for (ExecutionItem chainItem : getSteps()) {
         assistant.executeIfStillRunning(chainItem, true)
                  .addListener(new ExecutionItemCompletionRunner(chainItem));
