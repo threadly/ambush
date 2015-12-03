@@ -3,7 +3,7 @@ package org.threadly.load;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.threadly.load.ExecutableScript.ExecutionItem;
 import org.threadly.load.ExecutableScript.ExecutionItem.ChildItems;
@@ -74,21 +74,15 @@ public class ScriptBuilderUtils {
       }
     }
     
-    List<RunSignalAcceptor> signalAcceptors = new ArrayList<RunSignalAcceptor>(builders.length - 1);
-    for (Pair<AbstractScriptBuilder, Integer> fcBuilder : flowControlledBuilders) {
+    RunSignalAcceptor[] signalAcceptors = new RunSignalAcceptor[flowControlledBuilders.size()];
+    for (int i = 0; i < flowControlledBuilders.size(); i++) {
+      Pair<AbstractScriptBuilder, Integer> fcBuilder = flowControlledBuilders.get(i);
       // integer division is necessary to ensure execution
-      int signalsPerRun = largestBuilderCount / fcBuilder.getRight();
-      RunSignalAcceptor signalAcceptor = new RunSignalAcceptor(signalsPerRun);
-      signalAcceptors.add(signalAcceptor);
-      fcBuilder.getLeft().setStartHandlerOnAllSteps(signalAcceptor);
+      signalAcceptors[i] = new RunSignalAcceptor(largestBuilderCount / fcBuilder.getRight());
+      fcBuilder.getLeft().setStartHandlerOnAllSteps(signalAcceptors[i]);
     }
     
-    if (! signalAcceptors.isEmpty()) {
-      RunSignalAcceptor[] signalAcceptorsArray = new RunSignalAcceptor[signalAcceptors.size()];
-      signalAcceptorsArray = signalAcceptors.toArray(signalAcceptorsArray);
-      RunSignalSender signalSender = new RunSignalSender(signalAcceptorsArray);
-      largestBuilder.setStartHandlerOnAllSteps(signalSender);
-    }
+    largestBuilder.setStartHandlerOnAllSteps(new RunSignalSender(signalAcceptors));
     
     ParallelScriptBuilder result = new ParallelScriptBuilder();
     for (AbstractScriptBuilder builder : builders) {
@@ -125,40 +119,47 @@ public class ScriptBuilderUtils {
    */
   private static class RunSignalAcceptor implements StepStartHandler {
     private final int neededSignalCountPerStep;
+    private final AtomicBoolean registeredForFailures;
     private final Semaphore runSemaphore;
-    private final AtomicInteger signalCount;
     
     public RunSignalAcceptor(int neededSignalCountPerStep) {
       this.neededSignalCountPerStep = neededSignalCountPerStep;
-      runSemaphore = new Semaphore(0, true);  // no permits till executions complete
-      signalCount = new AtomicInteger(0);
+      registeredForFailures = new AtomicBoolean(false);
+      runSemaphore = new Semaphore(neededSignalCountPerStep / 2, true);  // half a permit for free to stagger
     }
     
     public void handleRunSignal() {
-      signalCount.incrementAndGet();
-      int casCount;
-      while ((casCount = signalCount.get()) >= neededSignalCountPerStep) {
-        if (signalCount.compareAndSet(casCount, casCount - neededSignalCountPerStep)) {
-          // allow execution
-          runSemaphore.release();
-        }
-      }
+      runSemaphore.release();
     }
 
     @Override
     public void readyToRun(ExecutionItem step, ExecutionAssistant assistant) {
+      if (! registeredForFailures.get() && registeredForFailures.compareAndSet(false, true)) {
+        // register for failure so that we can unblock any waiting steps
+        assistant.registerFailureNotification(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              while (true) {
+                runSemaphore.release(Short.MAX_VALUE / 2);
+              }
+            } catch (Throwable t) {
+              // swallowed, release till error is thrown
+            }
+          }
+        });
+      }
       try {
         /* TODO - I wish we could do this without blocking.  The trick here is that if we don't 
          * block we must somehow ensure the future returned from 
          * ExecutableScript.ScriptAssistant#executeIfStillRunning does not complete until we allow 
          * execution here (and complete execution of course).
          */
-        runSemaphore.acquire();
+        runSemaphore.acquire(neededSignalCountPerStep);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        throw new RuntimeException(e);
       }
-
+      
       step.setStartHandler(null); // unset ourself so that execution can happen naturally
       step.itemReadyForExecution(assistant);
     }

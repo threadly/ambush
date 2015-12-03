@@ -16,6 +16,7 @@ import org.threadly.concurrent.future.ListenableFuture;
 import org.threadly.concurrent.future.SettableListenableFuture;
 import org.threadly.concurrent.limiter.RateLimiterExecutor;
 import org.threadly.util.ArgumentVerifier;
+import org.threadly.util.ExceptionUtils;
 
 /**
  * <p>This class handles the execution of a completely generated execution script.</p>
@@ -77,11 +78,11 @@ public class ExecutableScript {
    */
   public List<ListenableFuture<StepResult>> startScript() {
     // copy result list to handle generics madness
-    final ArrayList<ListenableFuture<StepResult>> result = new ArrayList<ListenableFuture<StepResult>>();
+    final ArrayList<ListenableFuture<StepResult>> result = new ArrayList<ListenableFuture<StepResult>>(0);
     startExecutionItem.prepareForRun();
     result.addAll(startExecutionItem.getFutures());
     result.trimToSize();
-    
+
     CharsDeduplicator.clearCache();
     
     scriptAssistant.start(neededThreadQty + 1, result);
@@ -121,6 +122,8 @@ public class ExecutableScript {
     private final AtomicBoolean running;
     private final AtomicReference<PriorityScheduler> scheduler;
     private final AtomicReference<List<ListenableFuture<StepResult>>> futures;
+    private final AtomicBoolean markedFailure;
+    private final ArrayList<Runnable> failureListeners;
     private volatile ListenableFuture<?> completionFuture;
     private volatile SubmitterExecutor limiter;
     
@@ -128,6 +131,8 @@ public class ExecutableScript {
       running = scriptAssistant.running;
       scheduler = scriptAssistant.scheduler;
       futures = scriptAssistant.futures;
+      markedFailure = scriptAssistant.markedFailure;
+      failureListeners = scriptAssistant.failureListeners;
       limiter = scriptAssistant.limiter;
       completionFuture = scriptAssistant.completionFuture;
       
@@ -147,7 +152,44 @@ public class ExecutableScript {
       running = new AtomicBoolean(false);
       scheduler = new AtomicReference<PriorityScheduler>(null);
       futures = new AtomicReference<List<ListenableFuture<StepResult>>>(null);
+      markedFailure = new AtomicBoolean(false);
+      failureListeners = new ArrayList<Runnable>(1);
       limiter = null;
+    }
+
+    @Override
+    public void registerFailureNotification(Runnable listener) {
+      synchronized (failureListeners) {
+        if (markedFailure.get()) {
+          ExceptionUtils.runRunnable(listener);
+        } else {
+          failureListeners.add(listener);
+        }
+      }
+    }
+
+    @Override
+    public void markGlobalFailure() {
+      if (! markedFailure.get() && markedFailure.compareAndSet(false, true)) {
+        synchronized (failureListeners) {
+          for (Runnable r :  failureListeners) {
+            ExceptionUtils.runRunnable(r);
+          }
+          failureListeners.clear();
+        }
+        List<ListenableFuture<StepResult>> futures = this.futures.get();
+        if (futures != null) {
+          // try to short cut any steps we can
+          // Sadly this is a duplicate from other cancels, but since we are not garunteed to be 
+          // able to cancel here, we still need those points
+          FutureUtils.cancelIncompleteFutures(futures, true);
+        }
+      }
+    }
+
+    @Override
+    public boolean getMarkedGlobalFailure() {
+      return markedFailure.get();
     }
 
     public void start(int threadPoolSize, List<ListenableFuture<StepResult>> futures) {
@@ -182,6 +224,10 @@ public class ExecutableScript {
           running.set(false);
         }
       });
+      
+      synchronized (failureListeners) {
+        failureListeners.trimToSize();
+      }
     }
 
     @Override
@@ -387,6 +433,27 @@ public class ExecutableScript {
        * @return A new assistant instance
        */
       public ExecutionAssistant makeCopy();
+      
+      /**
+       * Register a listener to be invoked if a failure occurs.  This listener will be invoked 
+       * when any steps within the script invoke {@link #markGlobalFailure()}.
+       * 
+       * @param listener Listener to be invoked on failure
+       */
+      public void registerFailureNotification(Runnable listener);
+      
+      /**
+       * Mark the execution as failure.  This will invoke listeners registered by 
+       * {@link #registerFailureNotification(Runnable)}.
+       */
+      public void markGlobalFailure();
+      
+      /**
+       * Checks to see if {@link #markGlobalFailure()} has been invoked or not.
+       * 
+       * @return {@code true} if the script has been marked as failure
+       */
+      public boolean getMarkedGlobalFailure();
     }
     
     /**

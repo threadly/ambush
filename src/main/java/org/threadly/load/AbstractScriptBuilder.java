@@ -14,6 +14,7 @@ import org.threadly.load.ExecutableScript.ExecutionItem.ChildItems;
 import org.threadly.load.ExecutableScript.ExecutionItem.StepStartHandler;
 import org.threadly.util.ArgumentVerifier;
 import org.threadly.util.Clock;
+import org.threadly.util.ExceptionUtils;
 
 /**
  * <p>Provides the shared implementation among all execution step builders.  This also defines the 
@@ -433,6 +434,10 @@ public abstract class AbstractScriptBuilder {
     @Override
     public void prepareForRun() {
       futures.trimToSize();
+      
+      for (ExecutionItem ei : steps) {
+        ei.prepareForRun();
+      }
     }
 
     @Override
@@ -536,6 +541,13 @@ public abstract class AbstractScriptBuilder {
       scriptStep = null;
       future.cancel(true);  // should be done anyways
     }
+    
+    @Override
+    public void itemReadyForExecution(ExecutionAssistant assistant) {
+      // must override so we can set the running thread to handle the ability to interrupt
+      future.setRunningThread(Thread.currentThread());
+      super.itemReadyForExecution(assistant);
+    }
 
     @Override
     protected void runItem(ExecutionAssistant assistant) {
@@ -543,19 +555,24 @@ public abstract class AbstractScriptBuilder {
         throw new IllegalStateException("Run has completed");
       }
       
+      if (assistant.getMarkedGlobalFailure()) {
+        future.cancel(false);
+        return;
+      }
+      
       future.setRunningThread(Thread.currentThread());
       
       long startNanos = Clock.accurateTimeNanos();
-      StepResult result;
       try {
         scriptStep.runStep();
         long endNanos = Clock.accurateTimeNanos();
-        result = new PassStepResult(scriptStep.getIdentifier(), endNanos - startNanos);
+        future.setResult(new PassStepResult(scriptStep.getIdentifier(), endNanos - startNanos));
       } catch (Throwable t) {
         long endNanos = Clock.accurateTimeNanos();
-        result = new ErrorStepResult(scriptStep.getIdentifier(), endNanos - startNanos, t);
+        future.setResult(new ErrorStepResult(scriptStep.getIdentifier(), endNanos - startNanos, t));
+        // must set result before marking failure
+        assistant.markGlobalFailure();
       }
-      future.setResult(result);
     }
 
     @Override
@@ -604,15 +621,15 @@ public abstract class AbstractScriptBuilder {
 
     @Override
     public void setStartHandler(StepStartHandler handler) {
-      if (this.handler != null) {
+      if (this.handler != null && handler != null) {
         // TODO - do we need to handle multiple start handlers?  The cost is memory
-        throw new IllegalStateException("Pre-run condition already set");
+        ExceptionUtils.handleException(new IllegalStateException("Pre-run condition already set"));
       }
       this.handler = handler;
     }
     
     @Override
-    public final void itemReadyForExecution(ExecutionAssistant assistant) {
+    public void itemReadyForExecution(ExecutionAssistant assistant) {
       if (handler != null) {
         handler.readyToRun(this, assistant);
       } else {

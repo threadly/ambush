@@ -2,8 +2,8 @@ package org.threadly.load;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * <p>Class used for de duplicating strings into a more minimal storage form.  This does a more 
@@ -17,9 +17,9 @@ import java.util.Map;
  * @author jent - Mike Jensen
  */
 public class CharsDeduplicator {
-  private static final Object CACHE_LOCK = new Object();
   // TODO - should we make this hold soft references??
-  private static Map<Integer, ArrayList<LightCharSequence>> cache = null;
+  private static final ConcurrentMap<Integer, ArrayList<LightCharSequence>> CACHE = 
+      new ConcurrentHashMap<Integer, ArrayList<LightCharSequence>>();
   
   /**
    * De-duplicate the provided string into a lighter memory form.  Because this form is a new 
@@ -38,15 +38,12 @@ public class CharsDeduplicator {
       return null;
     }
     
-    ArrayList<LightCharSequence> deDupList;
-    synchronized (CACHE_LOCK) {
-      if (cache == null) {
-        cache = new HashMap<Integer, ArrayList<LightCharSequence>>();
-      }
-      deDupList = cache.get(chars.length);
-      if (deDupList == null) {
-        deDupList = new ArrayList<LightCharSequence>(1);
-        cache.put(chars.length, deDupList);
+    ArrayList<LightCharSequence> deDupList = CACHE.get(chars.length);
+    if (deDupList == null) {
+      deDupList = new ArrayList<LightCharSequence>(1);
+      ArrayList<LightCharSequence> replacedList = CACHE.putIfAbsent(chars.length, deDupList);
+      if (replacedList != null) {
+        deDupList = replacedList;
       }
     }
     
@@ -67,6 +64,6 @@ public class CharsDeduplicator {
    * Clears the stored cache, freeing up all stored memory here.
    */
   public static void clearCache() {
-    cache = null;
+    CACHE.clear();
   }
 }

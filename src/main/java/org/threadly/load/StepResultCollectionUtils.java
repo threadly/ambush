@@ -125,7 +125,8 @@ public class StepResultCollectionUtils {
     while (it.hasNext()) {
       try {
         StepResult tr = it.next().get();
-        if (longestStep == null || longestStep.getRunTime(TimeUnit.NANOSECONDS) < tr.getRunTime(TimeUnit.NANOSECONDS)) {
+        if (longestStep == null || 
+            longestStep.getRunTime(TimeUnit.NANOSECONDS) < tr.getRunTime(TimeUnit.NANOSECONDS)) {
           longestStep = tr;
         }
       } catch (CancellationException e) {

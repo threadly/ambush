@@ -137,7 +137,13 @@ public class ScriptRunner extends AbstractScriptFactoryInitializer {
         }
       }
     }
-    out("Totals steps executed: " + futures.size());
+    int totalExecuted = 0;
+    for (ListenableFuture<StepResult> f : futures) {
+      if (! f.isCancelled()) {
+        totalExecuted++;
+      }
+    }
+    out("Totals steps executed: " + totalExecuted + " / " + futures.size());
     out("Test execution time: " + ((end - start) / 1000) + " seconds");
     double averageRunMillis = StepResultCollectionUtils.getAverageRuntime(futures, TimeUnit.MILLISECONDS);
     out("Average time spent per step: " + averageRunMillis + " milliseconds");
