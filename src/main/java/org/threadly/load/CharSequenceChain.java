@@ -20,6 +20,9 @@ public class CharSequenceChain implements CharSequence {
     CharSequence[] fooChain = new CharSequence[chain.length];
     for (CharSequence cs : chain) {
       if (cs.length() > 0) {
+        if (cs instanceof String) {
+          cs = new LightCharSequence(((String)cs).toCharArray());
+        }
         fooChain[index++] = cs;
       }
     }

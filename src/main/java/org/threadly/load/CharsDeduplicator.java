@@ -2,6 +2,8 @@ package org.threadly.load;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.ConcurrentModificationException;
+import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -47,8 +49,23 @@ public class CharsDeduplicator {
       }
     }
     
+    int lastIndex = 0;
+    try {
+      Iterator<LightCharSequence> it = deDupList.iterator();
+      while (it.hasNext()) {
+        LightCharSequence c = it.next();
+        if (Arrays.equals(c.chars, chars)) {
+          return c;
+        }
+        lastIndex++;
+      }
+    } catch (ConcurrentModificationException e) {
+      // oh well, retry in lock
+    }
     synchronized (deDupList) {
-      for (LightCharSequence c : deDupList) {
+      Iterator<LightCharSequence> it = deDupList.listIterator(lastIndex);
+      while (it.hasNext()) {
+        LightCharSequence c = it.next();
         if (Arrays.equals(c.chars, chars)) {
           return c;
         }
