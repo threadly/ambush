@@ -62,6 +62,9 @@ public class ScriptBuilderUtils {
         new ArrayList<Pair<AbstractScriptBuilder, Integer>>(builders.length - 1);
     for (AbstractScriptBuilder builder : builders) {
       int builderCount = countScriptSteps(builder.getStepAsExecutionItem().getChildItems());
+      if (builderCount == 0) {
+        continue;
+      }
       if (builderCount > largestBuilderCount) {
         if (largestBuilder != null) {
           flowControlledBuilders.add(new Pair<AbstractScriptBuilder, Integer>(largestBuilder, 
@@ -74,15 +77,17 @@ public class ScriptBuilderUtils {
       }
     }
     
-    RunSignalAcceptor[] signalAcceptors = new RunSignalAcceptor[flowControlledBuilders.size()];
-    for (int i = 0; i < flowControlledBuilders.size(); i++) {
-      Pair<AbstractScriptBuilder, Integer> fcBuilder = flowControlledBuilders.get(i);
-      // integer division is necessary to ensure execution
-      signalAcceptors[i] = new RunSignalAcceptor(largestBuilderCount / fcBuilder.getRight());
-      fcBuilder.getLeft().setStartHandlerOnAllSteps(signalAcceptors[i]);
+    if (! flowControlledBuilders.isEmpty()) {
+      RunSignalAcceptor[] signalAcceptors = new RunSignalAcceptor[flowControlledBuilders.size()];
+      for (int i = 0; i < flowControlledBuilders.size(); i++) {
+        Pair<AbstractScriptBuilder, Integer> fcBuilder = flowControlledBuilders.get(i);
+        // integer division is necessary to ensure execution
+        signalAcceptors[i] = new RunSignalAcceptor(largestBuilderCount / fcBuilder.getRight());
+        fcBuilder.getLeft().setStartHandlerOnAllSteps(signalAcceptors[i]);
+      }
+      
+      largestBuilder.setStartHandlerOnAllSteps(new RunSignalSender(signalAcceptors));
     }
-    
-    largestBuilder.setStartHandlerOnAllSteps(new RunSignalSender(signalAcceptors));
     
     ParallelScriptBuilder result = new ParallelScriptBuilder();
     for (AbstractScriptBuilder builder : builders) {
