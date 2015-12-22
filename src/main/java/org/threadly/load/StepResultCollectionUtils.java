@@ -119,7 +119,7 @@ public class StepResultCollectionUtils {
    * 
    * @param futures Future collection to iterate over and inspect
    * @param timeUnit Time unit that the resulting percentile run times should be returned in
-   * @param percentiles Percentile points requested, must be provided, must be greater than zero and less than 100
+   * @param percentiles Percentile points requested, must be provided, must be between 0 and 100 (inclusive)
    * @return Map which key maps to percentile, and value maps to the result
    * @throws InterruptedException Thrown if thread is interrupted while waiting for results to complete
    */
@@ -147,8 +147,8 @@ public class StepResultCollectionUtils {
     
     Map<Double, Long> result = new LinkedHashMap<Double, Long>();
     for (double p : percentiles) {
-      if (p > 100 || p < 1) {
-        throw new IllegalArgumentException("Percentile not in range of 1 to 100: " + p);
+      if (p > 100 || p < 0) {
+        throw new IllegalArgumentException("Percentile not in range of 0 to 100: " + p);
       }
       
       int index = (int)((p / 100.) * runTimes.size());
