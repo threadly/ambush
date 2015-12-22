@@ -2,8 +2,11 @@ package org.threadly.load;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -90,7 +93,7 @@ public class StepResultCollectionUtils {
    * @return Average nanoseconds spent per test step 
    * @throws InterruptedException Thrown if the thread is interrupted while waiting for {@link StepResult}
    */
-  public static double getAverageRuntime(Collection<? extends Future<? extends StepResult>> futures, TimeUnit timeUnit) 
+  public static double getRunTimeAverage(Collection<? extends Future<? extends StepResult>> futures, TimeUnit timeUnit) 
       throws InterruptedException {
     double count = 0;
     double totalNanos = 0;
@@ -112,13 +115,56 @@ public class StepResultCollectionUtils {
   }
   
   /**
+   * Sort through results to get step run time percentiles.
+   * 
+   * @param futures Future collection to iterate over and inspect
+   * @param timeUnit Time unit that the resulting percentile run times should be returned in
+   * @param percentiles Percentile points requested, must be provided, must be greater than zero and less than 100
+   * @return Map which key maps to percentile, and value maps to the result
+   * @throws InterruptedException Thrown if thread is interrupted while waiting for results to complete
+   */
+  public static Map<Double, Long> 
+      getRunTimePercentiles(Collection<? extends Future<? extends StepResult>> futures, 
+                            TimeUnit timeUnit, double ... percentiles) throws InterruptedException {
+    if (percentiles.length == 0) {
+      throw new IllegalArgumentException("No percentiles requested");
+    }
+    
+    List<Long> runTimes = new ArrayList<Long>(futures.size());
+    Iterator<? extends Future<? extends StepResult>> it = futures.iterator();
+    while (it.hasNext()) {
+      try {
+        runTimes.add(it.next().get().getRunTime(timeUnit));
+      } catch (CancellationException e) {
+        // possible if canceled after a failure event
+      } catch (ExecutionException e) {
+        // should not be possible
+        throw new RuntimeException(e);
+      }
+    }
+    
+    Collections.sort(runTimes);
+    
+    Map<Double, Long> result = new LinkedHashMap<Double, Long>();
+    for (double p : percentiles) {
+      if (p > 100 || p < 1) {
+        throw new IllegalArgumentException("Percentile not in range of 1 to 100: " + p);
+      }
+      
+      int index = (int)((p / 100.) * runTimes.size());
+      result.put(p, runTimes.get(index));
+    }
+    return result;
+  }
+  
+  /**
    * Searched through the test results to find which test step took the longest to execute.
    * 
    * @param futures Future collection to iterate over and inspect
    * @return TestResult which took the longest to execute in the set
    * @throws InterruptedException Thrown if the thread is interrupted while waiting for {@link StepResult}
    */
-  public static StepResult getLongestRuntimeStep(Collection<? extends Future<? extends StepResult>> futures) 
+  public static StepResult getLongestRunTimeStep(Collection<? extends Future<? extends StepResult>> futures) 
       throws InterruptedException {
     StepResult longestStep = null;
     Iterator<? extends Future<? extends StepResult>> it = futures.iterator();

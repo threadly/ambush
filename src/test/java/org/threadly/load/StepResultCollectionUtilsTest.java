@@ -83,17 +83,19 @@ public class StepResultCollectionUtilsTest {
   }
   
   @Test
-    public void getAverageRuntimeTest() throws InterruptedException {
+  public void getAverageRuntimeTest() throws InterruptedException {
     assertEquals(PROCESSING_TIME_NANOS, 
-                 StepResultCollectionUtils.getAverageRuntime(futures, TimeUnit.NANOSECONDS), 0);
+                 StepResultCollectionUtils.getRunTimeAverage(futures, TimeUnit.NANOSECONDS), 0);
   }
+  
+  // TODO - add unit tests for percentiles
   
   @Test
   public void getLongestRuntimeStepPassStepTest() throws InterruptedException {
     StepResult longResult = new PassStepResult("foo", PROCESSING_TIME_NANOS + 1);
     futures.add(FutureUtils.immediateResultFuture(longResult));
     
-    assertTrue(longResult == StepResultCollectionUtils.getLongestRuntimeStep(futures));
+    assertTrue(longResult == StepResultCollectionUtils.getLongestRunTimeStep(futures));
   }
   
   @Test
@@ -101,6 +103,6 @@ public class StepResultCollectionUtilsTest {
     StepResult longResult = new ErrorStepResult("foo", PROCESSING_TIME_NANOS + 1, new Exception());
     futures.add(FutureUtils.immediateResultFuture(longResult));
     
-    assertTrue(longResult == StepResultCollectionUtils.getLongestRuntimeStep(futures));
+    assertTrue(longResult == StepResultCollectionUtils.getLongestRunTimeStep(futures));
   }
 }

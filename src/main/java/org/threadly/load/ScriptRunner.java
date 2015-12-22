@@ -20,6 +20,7 @@ import org.threadly.util.StringUtils;
  * @author jent - Mike Jensen
  */
 public class ScriptRunner extends AbstractScriptFactoryInitializer {
+  private static final double[] RETURNED_PERCENTILES = new double[]{75, 80, 85, 90, 95, 97.5, 99};
   /**
    * Main function, usually executed by the JVM on startup.
    * 
@@ -149,9 +150,16 @@ public class ScriptRunner extends AbstractScriptFactoryInitializer {
     }
     out("Totals steps executed: " + totalExecuted + " / " + futures.size());
     out("Test execution time: " + ((end - start) / 1000) + " seconds");
-    double averageRunMillis = StepResultCollectionUtils.getAverageRuntime(futures, TimeUnit.MILLISECONDS);
+    double averageRunMillis = StepResultCollectionUtils.getRunTimeAverage(futures, TimeUnit.MILLISECONDS);
     out("Average time spent per step: " + averageRunMillis + " milliseconds");
-    StepResult longestStep = StepResultCollectionUtils.getLongestRuntimeStep(futures);
+    Map<Double, Long> percentileResults = StepResultCollectionUtils.getRunTimePercentiles(futures, 
+                                                                                          TimeUnit.MILLISECONDS, 
+                                                                                          RETURNED_PERCENTILES);
+    for (Map.Entry<Double, Long> e : percentileResults.entrySet()) {
+      out("Percentile " + e.getKey() + ": " + e.getValue() + " milliseconds");
+    }
+    
+    StepResult longestStep = StepResultCollectionUtils.getLongestRunTimeStep(futures);
     out("Longest running step: " + longestStep.getDescription() + 
           ", ran for: " + longestStep.getRunTime(TimeUnit.MILLISECONDS) + " milliseconds");
     
