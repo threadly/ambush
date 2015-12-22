@@ -38,7 +38,7 @@ public class ScriptRunnerErrorTest {
   }
   
   @Test
-  public void runScriptStepFailureTest() throws InterruptedException {
+  public void runScriptStepFailureTest() throws Exception {
     TestScriptRunner runner = new TestScriptRunner(new String[]{ErrorScriptFactory.class.getName()});
     runner.runScript();
     // no exception thrown

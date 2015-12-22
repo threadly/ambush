@@ -25,9 +25,9 @@ public class ScriptRunner extends AbstractScriptFactoryInitializer {
    * Main function, usually executed by the JVM on startup.
    * 
    * @param args Arguments for startup, including which test should run and params for that test
-   * @throws InterruptedException Thrown if this thread is interrupted while waiting on test to run
+   * @throws Exception Thrown if error or interruption while waiting for script
    */
-  public static void main(String[] args) throws InterruptedException {
+  public static void main(String[] args) throws Exception {
     setupExceptionHandler();
     ScriptRunner runner = null;
     try {
@@ -89,18 +89,16 @@ public class ScriptRunner extends AbstractScriptFactoryInitializer {
   }
   
   /**
-   * Starts the execution of the script.  This executes and reports the output to 
-   * {@link #out(String)}.  That output includes tracked details during execution like speed and 
-   * success or failures.
+   * Invoked once the script has finished, either in success or failure.  This can overridden if 
+   * the default logging behavior wants to be changed.
    * 
-   * @throws InterruptedException Thrown if thread is interrupted during execution
-   * @return Number of failed steps
+   * @param rawFutures Futures for test steps, all now completed with either a result, or canceled
+   * @param fails Steps which failed, keep in mind that canceled steps wont be represented here
+   * @param runDurationMillis The duration in milliseconds that it took to run the entire script
+   * @throws Exception Thrown if unexpected error
    */
-  protected int runScript() throws InterruptedException {
-    long start = Clock.accurateForwardProgressingMillis();
-    List<ListenableFuture<StepResult>> futures = script.startScript();
-    List<StepResult> fails = StepResultCollectionUtils.getAllFailedResults(futures);
-    long end = Clock.accurateForwardProgressingMillis();
+  protected void handleRunFinish(List<ListenableFuture<StepResult>> rawFutures, 
+                                 List<StepResult> fails, long runDurationMillis) throws Exception {
     if (fails.isEmpty()) {
       out("All steps passed!");
     } else {
@@ -143,25 +141,42 @@ public class ScriptRunner extends AbstractScriptFactoryInitializer {
       }
     }
     int totalExecuted = 0;
-    for (ListenableFuture<StepResult> f : futures) {
+    for (ListenableFuture<StepResult> f : rawFutures) {
       if (! f.isCancelled()) {
         totalExecuted++;
       }
     }
-    out("Totals steps executed: " + totalExecuted + " / " + futures.size());
-    out("Test execution time: " + ((end - start) / 1000) + " seconds");
-    double averageRunMillis = StepResultCollectionUtils.getRunTimeAverage(futures, TimeUnit.MILLISECONDS);
+    out("Totals steps executed: " + totalExecuted + " / " + rawFutures.size());
+    out("Test execution time: " + (runDurationMillis / 1000) + " seconds");
+    double averageRunMillis = StepResultCollectionUtils.getRunTimeAverage(rawFutures, TimeUnit.MILLISECONDS);
     out("Average time spent per step: " + averageRunMillis + " milliseconds");
-    Map<Double, Long> percentileResults = StepResultCollectionUtils.getRunTimePercentiles(futures, 
+    Map<Double, Long> percentileResults = StepResultCollectionUtils.getRunTimePercentiles(rawFutures, 
                                                                                           TimeUnit.MILLISECONDS, 
                                                                                           RETURNED_PERCENTILES);
     for (Map.Entry<Double, Long> e : percentileResults.entrySet()) {
       out("Percentile " + e.getKey() + ": " + e.getValue() + " milliseconds");
     }
     
-    StepResult longestStep = StepResultCollectionUtils.getLongestRunTimeStep(futures);
+    StepResult longestStep = StepResultCollectionUtils.getLongestRunTimeStep(rawFutures);
     out("Longest running step: " + longestStep.getDescription() + 
           ", ran for: " + longestStep.getRunTime(TimeUnit.MILLISECONDS) + " milliseconds");
+  }
+  
+  /**
+   * Starts the execution of the script.  This executes and reports the output to 
+   * {@link #out(String)}.  That output includes tracked details during execution like speed and 
+   * success or failures.
+   * 
+   * @return Number of failed steps
+   * @throws Exception Thrown if error or interruption while waiting for script
+   */
+  protected int runScript() throws Exception {
+    long start = Clock.accurateForwardProgressingMillis();
+    List<ListenableFuture<StepResult>> futures = script.startScript();
+    List<StepResult> fails = StepResultCollectionUtils.getAllFailedResults(futures);
+    long end = Clock.accurateForwardProgressingMillis();
+    
+    handleRunFinish(futures, fails, end - start);
     
     return fails.size();
   }

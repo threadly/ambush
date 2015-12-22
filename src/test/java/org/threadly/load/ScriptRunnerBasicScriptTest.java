@@ -1,7 +1,5 @@
 package org.threadly.load;
 
-import java.util.concurrent.TimeoutException;
-
 import org.junit.Test;
 import org.threadly.test.concurrent.AsyncVerifier;
 import org.threadly.util.Clock;
@@ -22,7 +20,7 @@ public class ScriptRunnerBasicScriptTest {
   private static AsyncVerifier av = new AsyncVerifier();
   
   @Test
-  public void runSimpleScriptTest() throws InterruptedException, TimeoutException {
+  public void runSimpleScriptTest() throws Exception {
     String[] args = new String[] {SimpleScriptFactory.class.getName(), 
                                   boolKey + "=" + boolTestVal, 
                                   intKey + "=" + intTestVal, 
