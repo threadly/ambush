@@ -3,7 +3,7 @@ package org.threadly.load;
 import static org.junit.Assert.*;
 
 import org.junit.Test;
-import org.threadly.load.ScriptFactory.ScriptParameterException;
+import org.threadly.load.ParameterStore.ParameterException;
 import org.threadly.load.ScriptFactoryTest.TestScriptFactory;
 import org.threadly.util.StringUtils;
 
@@ -11,28 +11,28 @@ import org.threadly.util.StringUtils;
 public class ScriptRunnerErrorTest {
   @Test
   public void emptyArgsTest() {
-    assertTrue(new TestScriptRunner(new String[0]).usageAndExitCalled);
+    assertTrue(new TestScriptRunner(new String[0]).intializationFailureInvoked);
   }
   
   @Test
   public void unknownClassTest() {
-    assertTrue(new TestScriptRunner(new String[]{StringUtils.makeRandomString(5)}).usageAndExitCalled);
+    assertTrue(new TestScriptRunner(new String[]{StringUtils.makeRandomString(5)}).intializationFailureInvoked);
   }
   
   @Test
   public void classNotInstanceOfScriptRunnerTest() {
     assertTrue(new TestScriptRunner(new String[]{java.util.ArrayList.class.getName()})
-                 .usageAndExitCalled);
+                 .intializationFailureInvoked);
   }
   
   @Test
   public void classHasNoEmptyConstructorTest() {
     assertTrue(new TestScriptRunner(new String[]{NoEmptyArgConstructorFactory.class.getName()})
-                 .usageAndExitCalled);
+                 .intializationFailureInvoked);
   }
   
   @SuppressWarnings("unused")
-  @Test (expected = ScriptParameterException.class)
+  @Test (expected = ParameterException.class)
   public void errorDurringScriptGenerationTest() {
     new TestScriptRunner(new String[]{TestScriptFactory.class.getName()});
   }
@@ -42,19 +42,19 @@ public class ScriptRunnerErrorTest {
     TestScriptRunner runner = new TestScriptRunner(new String[]{ErrorScriptFactory.class.getName()});
     runner.runScript();
     // no exception thrown
-    assertFalse(runner.usageAndExitCalled);
+    assertFalse(runner.intializationFailureInvoked);
   }
   
   private static class TestScriptRunner extends ScriptRunner {
-    protected boolean usageAndExitCalled;
+    protected boolean intializationFailureInvoked;
     
     protected TestScriptRunner(String[] args) {
       super(args);
     }
 
     @Override
-    protected void usageAndExit(String runningScript) {
-      usageAndExitCalled = true;
+    protected void handleInitializationFailure(String runningScript) {
+      intializationFailureInvoked = true;
     }
   }
   

@@ -1,10 +1,10 @@
 package org.threadly.load;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 
-import org.threadly.load.ScriptFactory.ScriptParameterException;
 import org.threadly.util.StringUtils;
 
 /**
@@ -13,19 +13,26 @@ import org.threadly.util.StringUtils;
  * 
  * @author jent - Mike Jensen
  */
-abstract class AbstractScriptFactoryInitializer {
+//extends ParameterStore so extending classes can get parameters easily
+abstract class AbstractScriptFactoryInitializer extends ParameterStore {
   protected final ExecutableScript script;
   
   protected AbstractScriptFactoryInitializer(String[] args) {
-    if (args.length == 0) {
-      System.err.println("No arguments provided, need ScriptFactory class");
-      usageAndExit(null);
+    this(args.length > 0 ? args[0] : null, 
+         args.length > 1 ? ParameterStore.parseProperties(args, 1, args.length - 1) : new Properties());
+  }
+  
+  protected AbstractScriptFactoryInitializer(String classStr, Properties properties) {
+    super(properties);
+
+    if (StringUtils.isNullOrEmpty(classStr)) {
+      System.err.println("ScriptFactory class not provided");
+      handleInitializationFailure(null);
       // in test situations usageAndExit may not exit
       script = null;
       return;
     }
     
-    String classStr = args[0];
     ScriptFactory factory = null;
     try {
       Class<?> factoryClass = Class.forName(classStr);
@@ -34,29 +41,19 @@ abstract class AbstractScriptFactoryInitializer {
       } catch (ClassCastException e) {
         System.err.println("Class does not seem to be an instance of " + 
                              ScriptFactory.class.getSimpleName() + ": " + classStr);
-        usageAndExit(null);
+        handleInitializationFailure(null);
       } catch (InstantiationException e) {
         System.err.println("Failed to call empty cosntructor on: " + classStr);
         e.printStackTrace();
-        usageAndExit(null);
+        handleInitializationFailure(null);
       } catch (IllegalAccessException e) {
         System.err.println("Failed to call empty cosntructor on: " + classStr);
         e.printStackTrace();
-        usageAndExit(null);
+        handleInitializationFailure(null);
       }
     } catch (ClassNotFoundException e) {
       System.err.println("Could not find class in classpath: " + classStr);
-      usageAndExit(null);
-    }
-
-    Properties props = new Properties();
-    for (int i = 1; i < args.length; i++) {
-      int delimIndex = args[i].indexOf('=');
-      if (delimIndex < 1) {
-        System.err.println("Ignoring unknown key/value argument: " + args[i]);
-      } else {
-        props.put(args[i].substring(0, delimIndex), args[i].substring(delimIndex + 1));
-      }
+      handleInitializationFailure(null);
     }
     
     // may be null in test situations, not a normal case
@@ -64,12 +61,20 @@ abstract class AbstractScriptFactoryInitializer {
       script = null;
       return;
     }
-    factory.initialize(props);
+    factory.initialize(properties);
     try {
       script = factory.buildScript();
-    } catch (ScriptParameterException e) {
-      Map<String, String> paramDocs = factory.getPossibleParameters();
-      if (paramDocs == null || paramDocs.isEmpty()) {
+    } catch (ParameterException e) {
+      Map<String, String> paramDocs = new HashMap<String, String>();
+      Map<String, String> factoryParams = factory.getPossibleParameters();
+      if (factoryParams != null) {
+        paramDocs.putAll(factoryParams);
+      }
+      Map<String, String> runnerParams = this.getPossibleParameters();
+      if (runnerParams != null) {
+        paramDocs.putAll(runnerParams);
+      }
+      if (paramDocs.isEmpty()) {
         throw e;
       }
 
@@ -96,23 +101,16 @@ abstract class AbstractScriptFactoryInitializer {
       }
       System.err.print(paramDefs.toString());
       
-      usageAndExit(factory.getClass().getName());
+      handleInitializationFailure(factory.getClass().getName());
       throw e;  // should not really throw unless someone has overridden {@link usageAndExit}
     }
   }
-  
+
   /**
-   * Prints the usage for the expected arguments to be taken in from the main class, and then 
-   * exits with a non-zero status code.
+   * Invoked when there was an error in initializing the script.  Most definitions will likely 
+   * provide some usage help and possibly exit.
    * 
    * @param runningScript Possible script that is loaded, or {@code null} if unknown
    */
-  protected void usageAndExit(String runningScript) {
-    if (runningScript == null || runningScript.isEmpty()) {
-      runningScript = "script.factory.to.call";
-    }
-    System.err.println("java " + this.getClass().getName() + 
-                         " " + runningScript + " key1=value1 key2=value2....");
-    System.exit(1);
-  }
+  protected abstract void handleInitializationFailure(String buildingScript);
 }

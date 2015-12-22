@@ -38,7 +38,7 @@ public class ScriptRunnerBasicScriptTest {
 
       scriptBuilder.addStep(new ScriptStep() {
         @Override
-        public String getIdentifier() {
+        public CharSequence getIdentifier() {
           return "bool verifier";
         }
 
@@ -49,7 +49,7 @@ public class ScriptRunnerBasicScriptTest {
       });
       scriptBuilder.addStep(new ScriptStep() {
         @Override
-        public String getIdentifier() {
+        public CharSequence getIdentifier() {
           return "int verifier";
         }
 
@@ -60,7 +60,7 @@ public class ScriptRunnerBasicScriptTest {
       });
       scriptBuilder.addStep(new ScriptStep() {
         @Override
-        public String getIdentifier() {
+        public CharSequence getIdentifier() {
           return "long verifier";
         }
 
@@ -71,7 +71,7 @@ public class ScriptRunnerBasicScriptTest {
       });
       scriptBuilder.addStep(new ScriptStep() {
         @Override
-        public String getIdentifier() {
+        public CharSequence getIdentifier() {
           return "double verifier";
         }
 
@@ -82,7 +82,7 @@ public class ScriptRunnerBasicScriptTest {
       });
       scriptBuilder.addStep(new ScriptStep() {
         @Override
-        public String getIdentifier() {
+        public CharSequence getIdentifier() {
           return "string verifier";
         }
 
