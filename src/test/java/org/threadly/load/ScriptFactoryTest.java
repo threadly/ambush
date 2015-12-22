@@ -30,12 +30,10 @@ public class ScriptFactoryTest {
     properties = null;
   }
   
-  @Test
-  public void initializeTest() {
-    Properties properties = new Properties();
-    factory.initialize(properties);
-    
-    assertTrue(factory.properties == properties);
+  @Test (expected = IllegalStateException.class)
+  public void initializeFail() {
+    factory.initialize(new Properties());
+    fail("Exception should have thrown");
   }
   
   @Test
