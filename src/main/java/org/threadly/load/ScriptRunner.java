@@ -35,7 +35,7 @@ public class ScriptRunner extends AbstractScriptFactoryInitializer {
       System.err.println("Unexpected failure when building script: ");
       printFailureAndExit(t);
     }
-    runner.runScript();
+    System.exit(runner.runScript());
   }
   
   /**
@@ -67,6 +67,9 @@ public class ScriptRunner extends AbstractScriptFactoryInitializer {
     if (hashCode == 0) {
       hashCode = -1;
     }
+    if (hashCode > 0) {
+      hashCode *= -1;
+    }
     System.exit(hashCode);
   }
   
@@ -90,8 +93,9 @@ public class ScriptRunner extends AbstractScriptFactoryInitializer {
    * success or failures.
    * 
    * @throws InterruptedException Thrown if thread is interrupted during execution
+   * @return Number of failed steps
    */
-  protected void runScript() throws InterruptedException {
+  protected int runScript() throws InterruptedException {
     long start = Clock.accurateForwardProgressingMillis();
     List<ListenableFuture<StepResult>> futures = script.startScript();
     List<StepResult> fails = StepResultCollectionUtils.getAllFailedResults(futures);
@@ -150,5 +154,7 @@ public class ScriptRunner extends AbstractScriptFactoryInitializer {
     StepResult longestStep = StepResultCollectionUtils.getLongestRuntimeStep(futures);
     out("Longest running step: " + longestStep.getDescription() + 
           ", ran for: " + longestStep.getRunTime(TimeUnit.MILLISECONDS) + " milliseconds");
+    
+    return fails.size();
   }
 }
