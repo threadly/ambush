@@ -95,7 +95,7 @@ public class StepResultCollectionUtilsTest {
     StepResult longResult = new PassStepResult("foo", PROCESSING_TIME_NANOS + 1);
     futures.add(FutureUtils.immediateResultFuture(longResult));
     
-    assertTrue(longResult == StepResultCollectionUtils.getLongestRunTimeStep(futures));
+    assertTrue(longResult == StepResultCollectionUtils.getRunTimePercentiles(futures, 100).get(100.));
   }
   
   @Test
@@ -103,6 +103,6 @@ public class StepResultCollectionUtilsTest {
     StepResult longResult = new ErrorStepResult("foo", PROCESSING_TIME_NANOS + 1, new Exception());
     futures.add(FutureUtils.immediateResultFuture(longResult));
     
-    assertTrue(longResult == StepResultCollectionUtils.getLongestRunTimeStep(futures));
+    assertTrue(longResult == StepResultCollectionUtils.getRunTimePercentiles(futures, 100).get(100.));
   }
 }

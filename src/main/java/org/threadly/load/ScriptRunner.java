@@ -20,7 +20,8 @@ import org.threadly.util.StringUtils;
  * @author jent - Mike Jensen
  */
 public class ScriptRunner extends AbstractScriptFactoryInitializer {
-  private static final double[] RETURNED_PERCENTILES = new double[]{75, 80, 85, 90, 95, 97.5, 99};
+  private static final double[] RETURNED_PERCENTILES = new double[]{50, 75, 80, 85, 90, 95, 
+                                                                    98, 99, 99.5, 99.9, 100};
   /**
    * Main function, usually executed by the JVM on startup.
    * 
@@ -166,14 +167,15 @@ public class ScriptRunner extends AbstractScriptFactoryInitializer {
     out("Test execution time: " + (runDurationMillis / 1000) + " seconds");
     double averageRunMillis = StepResultCollectionUtils.getRunTimeAverage(rawFutures, TimeUnit.MILLISECONDS);
     out("Average time spent per step: " + averageRunMillis + " milliseconds");
-    Map<Double, Long> percentileResults = StepResultCollectionUtils.getRunTimePercentiles(rawFutures, 
-                                                                                          TimeUnit.MILLISECONDS, 
-                                                                                          RETURNED_PERCENTILES);
-    for (Map.Entry<Double, Long> e : percentileResults.entrySet()) {
-      out("Percentile " + e.getKey() + ": " + e.getValue() + " milliseconds");
+    Map<Double, StepResult> percentileResults = StepResultCollectionUtils.getRunTimePercentiles(rawFutures, 
+                                                                                                RETURNED_PERCENTILES);
+    for (Map.Entry<Double, StepResult> e : percentileResults.entrySet()) {
+      if (e.getKey() < 100) {
+        out("Percentile " + e.getKey() + ": " + e.getValue().getRunTime(TimeUnit.MILLISECONDS) + " milliseconds");
+      }
     }
     
-    StepResult longestStep = StepResultCollectionUtils.getLongestRunTimeStep(rawFutures);
+    StepResult longestStep = percentileResults.get(RETURNED_PERCENTILES[RETURNED_PERCENTILES.length - 1]);
     out("Longest running step: " + longestStep.getDescription() + 
           ", ran for: " + longestStep.getRunTime(TimeUnit.MILLISECONDS) + " milliseconds");
   }
