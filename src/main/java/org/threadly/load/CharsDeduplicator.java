@@ -1,11 +1,11 @@
 package org.threadly.load;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import org.threadly.concurrent.collections.ConcurrentArrayList;
 
 /**
  * <p>Class used for de duplicating strings into a more minimal storage form.  This does a more 
@@ -20,8 +20,8 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class CharsDeduplicator {
   // TODO - should we make this hold soft references??
-  private static final ConcurrentMap<Integer, ArrayList<LightCharSequence>> CACHE = 
-      new ConcurrentHashMap<Integer, ArrayList<LightCharSequence>>();
+  private static final ConcurrentMap<Integer, ConcurrentArrayList<LightCharSequence>> CACHE = 
+      new ConcurrentHashMap<Integer, ConcurrentArrayList<LightCharSequence>>();
   
   /**
    * De-duplicate the provided string into a lighter memory form.  Because this form is a new 
@@ -35,34 +35,31 @@ public class CharsDeduplicator {
     return deDuplicate(str.toCharArray());
   }
   
-  private static LightCharSequence deDuplicate(char[] chars) {
+  protected static LightCharSequence deDuplicate(char[] chars) {
     if (chars == null) {
       return null;
     }
     
-    ArrayList<LightCharSequence> deDupList = CACHE.get(chars.length);
+    ConcurrentArrayList<LightCharSequence> deDupList = CACHE.get(chars.length);
     if (deDupList == null) {
-      deDupList = new ArrayList<LightCharSequence>(1);
-      ArrayList<LightCharSequence> replacedList = CACHE.putIfAbsent(chars.length, deDupList);
-      if (replacedList != null) {
-        deDupList = replacedList;
+      deDupList = new ConcurrentArrayList<LightCharSequence>();
+      ConcurrentArrayList<LightCharSequence> existing = CACHE.putIfAbsent(chars.length, deDupList);
+      if (existing != null) {
+        deDupList = existing;
       }
     }
     
+    // more likely to see updates from .get() calls than iterator, and RandomAccessList anyways
     int lastIndex = 0;
-    try {
-      Iterator<LightCharSequence> it = deDupList.iterator();
-      while (it.hasNext()) {
-        LightCharSequence c = it.next();
-        if (Arrays.equals(c.chars, chars)) {
-          return c;
-        }
-        lastIndex++;
+    for (; lastIndex < deDupList.size(); lastIndex++) {
+      LightCharSequence c = deDupList.get(lastIndex);
+      if (Arrays.equals(c.chars, chars)) {
+        return c;
       }
-    } catch (ConcurrentModificationException e) {
-      // oh well, retry in lock
     }
-    synchronized (deDupList) {
+    
+    // not found, so lock, verify absolutely not in list, then add if still not found
+    synchronized (deDupList.getModificationLock()) {
       Iterator<LightCharSequence> it = deDupList.listIterator(lastIndex);
       while (it.hasNext()) {
         LightCharSequence c = it.next();
