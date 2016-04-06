@@ -14,7 +14,7 @@ import org.threadly.concurrent.future.FutureUtils;
 import org.threadly.concurrent.future.ImmediateResultListenableFuture;
 import org.threadly.concurrent.future.ListenableFuture;
 import org.threadly.concurrent.future.SettableListenableFuture;
-import org.threadly.concurrent.limiter.RateLimiterExecutor;
+import org.threadly.concurrent.wrapper.limiter.RateLimiterExecutor;
 import org.threadly.util.ArgumentVerifier;
 import org.threadly.util.ExceptionUtils;
 
