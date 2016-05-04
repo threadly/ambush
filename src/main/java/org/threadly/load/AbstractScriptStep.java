@@ -3,6 +3,7 @@ package org.threadly.load;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.threadly.util.ArgumentVerifier;
 import org.threadly.util.StringUtils;
 
 /**
@@ -31,8 +32,9 @@ public abstract class AbstractScriptStep implements ScriptStep {
   }
   
   /**
-   * Unset or remove a global parameter.  If using the global parameters map heavily, you may find 
-   * you need to remove data as you are done with it so that the heap does not grow without bounds.
+   * Unset or remove a given global parameter.  If using the global parameters map heavily, you may 
+   * find you need to remove data as you are done with it so that the heap does not grow without 
+   * bounds.
    * 
    * @param key Key to be removed
    * @return Value previously associated with the key
@@ -53,9 +55,16 @@ public abstract class AbstractScriptStep implements ScriptStep {
     return StringUtils.nullToEmpty(PARAMS.get(key));
   }
   
-  private final CharSequence identifier;
+  protected final CharSequence identifier;
+  protected final ScriptStepType stepType;
   
   protected AbstractScriptStep(CharSequence identifier) {
+    this(identifier, ScriptStepType.Normal);
+  }
+  
+  protected AbstractScriptStep(CharSequence identifier, ScriptStepType stepType) {
+    ArgumentVerifier.assertNotNull(stepType, "stepType");
+    
     if (identifier instanceof String) {
       this.identifier = CharsDeduplicator.deDuplicate((String)identifier);
     } else if (identifier == null) {
@@ -63,10 +72,13 @@ public abstract class AbstractScriptStep implements ScriptStep {
     } else {
       this.identifier = identifier;
     }
+    
+    this.stepType = stepType;
   }
-  
-  protected AbstractScriptStep(String identifier) {
-    this.identifier = CharsDeduplicator.deDuplicate(StringUtils.nullToEmpty(identifier));
+
+  @Override
+  public ScriptStepType getStepType() {
+    return stepType;
   }
   
   @Override

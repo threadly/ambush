@@ -73,12 +73,7 @@ public class ScriptRunnerErrorTest {
     @Override
     public ExecutableScript buildScript() {
       SequentialScriptBuilder builder = new SequentialScriptBuilder();
-      builder.addStep(new ScriptStep() {
-        @Override
-        public String getIdentifier() {
-          return "fail step";
-        }
-
+      builder.addStep(new AbstractScriptStep("fail step") {
         @Override
         public void runStep() throws Exception {
           throw new Exception("step failure");

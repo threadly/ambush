@@ -102,6 +102,9 @@ public class StepResultCollectionUtils {
     while (it.hasNext()) {
       try {
         StepResult tr = it.next().get();
+        if (tr.wasMaintanceStep()) {
+          continue;
+        }
         count++;
         totalNanos += tr.getRunTime(timeUnit);
       } catch (CancellationException e) {
@@ -135,7 +138,11 @@ public class StepResultCollectionUtils {
     Iterator<? extends Future<? extends StepResult>> it = futures.iterator();
     while (it.hasNext()) {
       try {
-        runTimes.add(it.next().get());
+        StepResult sr = it.next().get();
+        if (sr.wasMaintanceStep()) {
+          continue;
+        }
+        runTimes.add(sr);
       } catch (CancellationException e) {
         // possible if canceled after a failure event
       } catch (ExecutionException e) {

@@ -11,6 +11,15 @@ import java.util.concurrent.TimeUnit;
  */
 public interface StepResult {
   /**
+   * Indicates if the result of this step was of type {@link ScriptStepType#Maintenance} or 
+   * {@link ScriptStepType#AsyncMaintenance}.  In either of those conditions the run time will 
+   * always be zero, and thus should not be included in the resulting statistics.
+   * 
+   * @return {@code true} if the step was a maintance step
+   */
+  public boolean wasMaintanceStep();
+  
+  /**
    * Get description of the test.
    * 
    * @return Description of ran test

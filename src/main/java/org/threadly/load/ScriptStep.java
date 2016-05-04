@@ -14,6 +14,14 @@ public interface ScriptStep {
   public CharSequence getIdentifier();
   
   /**
+   * Checked before step execution.  This indicates what type of script step this is, and thus 
+   * how results from the step should be handled.
+   * 
+   * @return A non-null type to indicate how this step should be ran
+   */
+  public ScriptStepType getStepType();
+  
+  /**
    * This must be implemented for the actual execution of the script step.  This invocation should 
    * block until the step has completed.  If the script completed without error just return 
    * normally.  If the test failed, it is expected this will throw an exception which represents 

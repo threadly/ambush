@@ -14,4 +14,9 @@ class PassStepResult extends AbstractStepResult {
   public Throwable getError() {
     return null;
   }
+
+  @Override
+  public boolean wasMaintanceStep() {
+    return false;
+  }
 }

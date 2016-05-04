@@ -22,4 +22,9 @@ class ErrorStepResult extends AbstractStepResult {
   public Throwable getError() {
     return error;
   }
+
+  @Override
+  public boolean wasMaintanceStep() {
+    return false;
+  }
 }

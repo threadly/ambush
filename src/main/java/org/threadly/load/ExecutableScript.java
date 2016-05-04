@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.threadly.concurrent.PriorityScheduler;
 import org.threadly.concurrent.SubmitterExecutor;
+import org.threadly.concurrent.TaskPriority;
 import org.threadly.concurrent.future.ExecuteOnGetFutureTask;
 import org.threadly.concurrent.future.FutureUtils;
 import org.threadly.concurrent.future.ImmediateResultListenableFuture;
@@ -236,6 +237,14 @@ public class ExecutableScript {
     }
     
     @Override
+    public void executeAsyncMaintenanceTaskIfStillRunning(Runnable task) {
+      PriorityScheduler ps = scheduler.get();
+      if (ps != null) {
+        ps.execute(task, TaskPriority.Starvable);
+      }
+    }
+    
+    @Override
     public ListenableFuture<?> executeIfStillRunning(ExecutionItem item, boolean forceAsync) {
       // the existence of the scheduler (and possibly limiter) indicate still running
       SubmitterExecutor limiter = this.limiter;
@@ -408,6 +417,15 @@ public class ExecutableScript {
        */
       public ListenableFuture<?> executeIfStillRunning(ExecutionItem item, boolean forceAsync);
       
+      /**
+       * Call to get a asynchronously execute a maintenance task.  Typically 
+       * {@link #executeIfStillRunning(ExecutionItem, boolean)} should be the go-to execution point, 
+       * but for internal tasks this can be used as well.
+       * 
+       * @param task Task to be executed 
+       */
+      public void executeAsyncMaintenanceTaskIfStillRunning(Runnable task);
+
       /**
        * Changes what the limit is for how many steps per second are allowed to execute.  Delays 
        * in step execution are NOT factored in step run time.  Provide {@code 0} to set no limit 

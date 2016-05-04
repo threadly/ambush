@@ -562,16 +562,49 @@ public abstract class AbstractScriptBuilder {
       
       future.setRunningThread(Thread.currentThread());
       
-      long startNanos = Clock.accurateTimeNanos();
-      try {
-        scriptStep.runStep();
-        long endNanos = Clock.accurateTimeNanos();
-        future.setResult(new PassStepResult(scriptStep.getIdentifier(), endNanos - startNanos));
-      } catch (Throwable t) {
-        long endNanos = Clock.accurateTimeNanos();
-        future.setResult(new ErrorStepResult(scriptStep.getIdentifier(), endNanos - startNanos, t));
-        // must set result before marking failure
-        assistant.markGlobalFailure();
+      switch (scriptStep.getStepType()) {
+        case Normal: {
+          long startNanos = Clock.accurateTimeNanos();
+          try {
+            scriptStep.runStep();
+            long endNanos = Clock.accurateTimeNanos();
+            future.setResult(new PassStepResult(scriptStep.getIdentifier(), 
+                                                endNanos - startNanos));
+          } catch (Throwable t) {
+            long endNanos = Clock.accurateTimeNanos();
+            future.setResult(new ErrorStepResult(scriptStep.getIdentifier(), 
+                                                 endNanos - startNanos, t));
+            // must set result before marking failure
+            assistant.markGlobalFailure();
+          }
+        } break;
+        case AsyncMaintenance:
+          // set as complete immediately so script can continue
+          future.setResult(new MaintenancePassStepResult(scriptStep.getIdentifier()));
+          
+          assistant.executeAsyncMaintenanceTaskIfStillRunning(new Runnable() {
+            @Override
+            public void run() {
+              try {
+                scriptStep.runStep();
+              } catch (Throwable t) {
+                ExceptionUtils.handleException(t);
+              }
+            }
+          });
+          break;
+        case Maintenance: {
+          try {
+            scriptStep.runStep();
+            future.setResult(new MaintenancePassStepResult(scriptStep.getIdentifier()));
+          } catch (Throwable t) {
+            future.setResult(new MaintenanceErrorStepResult(scriptStep.getIdentifier(), t));
+            // must set result before marking failure
+            assistant.markGlobalFailure();
+          }
+        } break;
+        default:
+          throw new UnsupportedOperationException();
       }
     }
 

@@ -36,67 +36,37 @@ public class ScriptRunnerBasicScriptTest {
     public ExecutableScript buildScript() {
       SequentialScriptBuilder scriptBuilder = new SequentialScriptBuilder();
 
-      scriptBuilder.addStep(new ScriptStep() {
-        @Override
-        public CharSequence getIdentifier() {
-          return "bool verifier";
-        }
-
+      scriptBuilder.addStep(new AbstractScriptStep("bool verifier") {
         @Override
         public void runStep() throws Exception {
           av.assertEquals(boolTestVal, getBoolValue(boolKey));
         }
       });
-      scriptBuilder.addStep(new ScriptStep() {
-        @Override
-        public CharSequence getIdentifier() {
-          return "int verifier";
-        }
-
+      scriptBuilder.addStep(new AbstractScriptStep("int verifier") {
         @Override
         public void runStep() throws Exception {
           av.assertEquals(intTestVal, getIntValue(intKey));
         }
       });
-      scriptBuilder.addStep(new ScriptStep() {
-        @Override
-        public CharSequence getIdentifier() {
-          return "long verifier";
-        }
-
+      scriptBuilder.addStep(new AbstractScriptStep("long verifier") {
         @Override
         public void runStep() throws Exception {
           av.assertEquals(longTestVal, getLongValue(longKey));
         }
       });
-      scriptBuilder.addStep(new ScriptStep() {
-        @Override
-        public CharSequence getIdentifier() {
-          return "double verifier";
-        }
-
+      scriptBuilder.addStep(new AbstractScriptStep("double verifier") {
         @Override
         public void runStep() throws Exception {
           av.assertEquals(doubleTestVal, getDoubleValue(doubleKey));
         }
       });
-      scriptBuilder.addStep(new ScriptStep() {
-        @Override
-        public CharSequence getIdentifier() {
-          return "string verifier";
-        }
-
+      scriptBuilder.addStep(new AbstractScriptStep("string verifier") {
         @Override
         public void runStep() throws Exception {
           av.assertEquals(stringTestVal, getStringValue(stringKey));
         }
       });
-      scriptBuilder.addStep(new ScriptStep() {
-        @Override
-        public String getIdentifier() {
-          return "end step";
-        }
-
+      scriptBuilder.addStep(new AbstractScriptStep("end step") {
         @Override
         public void runStep() throws Exception {
           av.signalComplete();
