@@ -31,6 +31,17 @@ public abstract class AbstractScriptStep implements ScriptStep {
   }
   
   /**
+   * Unset or remove a global parameter.  If using the global parameters map heavily, you may find 
+   * you need to remove data as you are done with it so that the heap does not grow without bounds.
+   * 
+   * @param key Key to be removed
+   * @return Value previously associated with the key
+   */
+  public static String removeGlobalParam(String key) {
+    return PARAMS.remove(key);
+  }
+  
+  /**
    * Requests to get the global param that has been set via 
    * {@link #setGlobalParam(String, String)}.  This is NOT specific to this test instance, but 
    * rather parameters which are shared among all tests.
