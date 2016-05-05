@@ -578,7 +578,10 @@ public abstract class AbstractScriptBuilder {
             assistant.markGlobalFailure();
           }
         } break;
-        case AsyncMaintenance:
+        case AsyncMaintenance: {
+          // final reference since scriptStep will be nulled out after step completes
+          final ScriptStep fScriptStep = scriptStep;
+          
           // set as complete immediately so script can continue
           future.setResult(new MaintenancePassStepResult(scriptStep.getIdentifier()));
           
@@ -586,13 +589,13 @@ public abstract class AbstractScriptBuilder {
             @Override
             public void run() {
               try {
-                scriptStep.runStep();
+                fScriptStep.runStep();
               } catch (Throwable t) {
                 ExceptionUtils.handleException(t);
               }
             }
           });
-          break;
+        } break;
         case Maintenance: {
           try {
             scriptStep.runStep();
