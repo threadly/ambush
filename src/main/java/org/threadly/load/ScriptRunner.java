@@ -1,6 +1,7 @@
 package org.threadly.load;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -22,6 +23,7 @@ import org.threadly.util.StringUtils;
 public class ScriptRunner extends AbstractScriptFactoryInitializer {
   private static final double[] RETURNED_PERCENTILES = new double[]{50, 75, 80, 85, 90, 95, 
                                                                     98, 99, 99.5, 99.9, 100};
+  private static final boolean TRIM_AMBUSH_STACK_AWAY = true;
   /**
    * Main function, usually executed by the JVM on startup.
    * 
@@ -125,7 +127,24 @@ public class ScriptRunner extends AbstractScriptFactoryInitializer {
         Iterator<StepResult> it = fails.iterator();
         while (it.hasNext()) {
           StepResult tr = it.next();
-          String errorMsg = ExceptionUtils.stackToString(tr.getError());
+          StringBuilder sb = new StringBuilder();
+          sb.append(tr.getError().toString());
+          StackTraceElement[] origStack = tr.getError().getStackTrace();
+          StackTraceElement[] trimmedStack;
+          if (TRIM_AMBUSH_STACK_AWAY) {
+            String packageStr = this.getClass().getPackage().toString();
+            int i = 1;
+            for (; i < origStack.length; i++) {
+              if (origStack[i].getClassName().startsWith(packageStr)) {
+                break;
+              }
+            }
+            trimmedStack = Arrays.copyOf(origStack, i);
+          } else {
+            trimmedStack = origStack;
+          }
+          ExceptionUtils.writeStackTo(trimmedStack, sb);
+          String errorMsg = sb.toString(); 
           List<StepResult> currentSteps = failureCountMap.get(errorMsg);
           if (currentSteps == null) {
             currentSteps = new ArrayList<StepResult>(1);
