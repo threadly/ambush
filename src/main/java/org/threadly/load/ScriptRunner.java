@@ -128,11 +128,11 @@ public class ScriptRunner extends AbstractScriptFactoryInitializer {
         while (it.hasNext()) {
           StepResult tr = it.next();
           StringBuilder sb = new StringBuilder();
-          sb.append(tr.getError().toString());
+          sb.append(tr.getError().toString()).append(StringUtils.NEW_LINE);
           StackTraceElement[] origStack = tr.getError().getStackTrace();
           StackTraceElement[] trimmedStack;
           if (TRIM_AMBUSH_STACK_AWAY) {
-            String packageStr = this.getClass().getPackage().toString();
+            String packageStr = ScriptRunner.class.getPackage().getName();
             int i = 1;
             for (; i < origStack.length; i++) {
               if (origStack[i].getClassName().startsWith(packageStr)) {
