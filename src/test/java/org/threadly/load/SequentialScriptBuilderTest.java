@@ -27,6 +27,25 @@ public class SequentialScriptBuilderTest {
   }
   
   @Test
+  public void hasStepsSimpleStepTest() {
+    assertFalse(sBuilder.hasSteps());
+    sBuilder.addStep(new TestStep());
+    assertTrue(sBuilder.hasSteps());
+  }
+  
+  @Test
+  public void hasStepsBuilderAddedTest() {
+    assertFalse(sBuilder.hasSteps());
+    sBuilder.addSteps(new ParallelScriptBuilder());
+    assertFalse(sBuilder.hasSteps());
+    
+    ParallelScriptBuilder secondBuilder = new ParallelScriptBuilder();
+    secondBuilder.addStep(new TestStep());
+    sBuilder.addSteps(secondBuilder);
+    assertTrue(sBuilder.hasSteps());
+  }
+  
+  @Test
   public void addParallelStepsTest() throws InterruptedException {
     ParallelScriptBuilder pBuilder = new ParallelScriptBuilder();
     pBuilder.addStep(new TestStep(), 10);

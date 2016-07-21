@@ -27,6 +27,11 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
   public ParallelScriptBuilder() {
     currentStep = new ParallelStep();
   }
+  
+  @Override
+  public boolean hasSteps() {
+    return currentStep.getStepCount() > 0;
+  }
 
   @Override
   protected ExecutionItem getStepAsExecutionItem() {
@@ -102,7 +107,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
   public void addSteps(SequentialScriptBuilder sequentialSteps) {
     verifyValid();
     sequentialSteps.replaced();
-    if (sequentialSteps.currentStep.getStepCount() == 0) {
+    if (! sequentialSteps.hasSteps()) {
       return;
     }
     incrementThreads(sequentialSteps.getMaximumNeededThreadCount());
@@ -124,7 +129,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
   public void addSteps(ParallelScriptBuilder parallelSteps) {
     verifyValid();
     parallelSteps.replaced();
-    if (parallelSteps.currentStep.getStepCount() == 0) {
+    if (! parallelSteps.hasSteps()) {
       return;
     }
     incrementThreads(parallelSteps.getMaximumNeededThreadCount());

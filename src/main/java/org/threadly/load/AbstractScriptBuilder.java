@@ -70,6 +70,14 @@ public abstract class AbstractScriptBuilder {
   public void setMaxScriptStepRate(double stepsPerSecondLimit) {
     addStep(new RateAdjustmentStep(stepsPerSecondLimit));
   }
+  
+  /**
+   * Checks if the builder has had at least one step added to it.  If this returns {@code false} 
+   * then this builder is effectively a no-op.
+   * 
+   * @return {@code true} if at least one step is attached to this builder
+   */
+  public abstract boolean hasSteps();
 
   /**
    * Add a step to this builder.  For more specific step addition descriptions please see: 

@@ -14,6 +14,26 @@ import org.threadly.concurrent.future.ListenableFuture;
 @SuppressWarnings("javadoc")
 public class ParallelScriptBuilderTest {
   @Test
+  public void hasStepsSimpleStepTest() {
+    ParallelScriptBuilder pBuilder = new ParallelScriptBuilder();
+    assertFalse(pBuilder.hasSteps());
+    pBuilder.addStep(new TestStep());
+    assertTrue(pBuilder.hasSteps());
+  }
+  
+  @Test
+  public void hasStepsBuilderAddedTest() {
+    ParallelScriptBuilder pBuilder = new ParallelScriptBuilder();
+    assertFalse(pBuilder.hasSteps());
+    pBuilder.addSteps(new ParallelScriptBuilder());
+    assertFalse(pBuilder.hasSteps());
+    ParallelScriptBuilder secondBuilder = new ParallelScriptBuilder();
+    secondBuilder.addStep(new TestStep());
+    pBuilder.addSteps(secondBuilder);
+    assertTrue(pBuilder.hasSteps());
+  }
+  
+  @Test
   public void addParallelStepsTest() throws InterruptedException, TimeoutException, ExecutionException {
     ParallelScriptBuilder pBuilder = new ParallelScriptBuilder();
     addSteps(makeTestSteps(null, TEST_COMPLEXITY), pBuilder);
