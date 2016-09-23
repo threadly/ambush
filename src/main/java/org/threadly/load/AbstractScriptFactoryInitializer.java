@@ -96,8 +96,8 @@ abstract class AbstractScriptFactoryInitializer extends ParameterStore {
           }
           paramDefs.append(" - ").append(param.getValue());
         }
-        paramDefs.append(StringUtils.NEW_LINE)
-                 .append(StringUtils.NEW_LINE);
+        paramDefs.append(System.lineSeparator())
+                 .append(System.lineSeparator());
       }
       System.err.print(paramDefs.toString());
       

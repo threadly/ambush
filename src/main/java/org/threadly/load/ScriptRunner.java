@@ -122,13 +122,13 @@ public class ScriptRunner extends AbstractScriptFactoryInitializer {
       out("All steps passed!");
     } else {
       Map<String, List<StepResult>> failureCountMap = new HashMap<String, List<StepResult>>();
-      out(fails.size() + " STEPS FAILED!!" + StringUtils.NEW_LINE);
+      out(fails.size() + " STEPS FAILED!!" + System.lineSeparator());
       {
         Iterator<StepResult> it = fails.iterator();
         while (it.hasNext()) {
           StepResult tr = it.next();
           StringBuilder sb = new StringBuilder();
-          sb.append(tr.getError().toString()).append(StringUtils.NEW_LINE);
+          sb.append(tr.getError().toString()).append(System.lineSeparator());
           StackTraceElement[] origStack = tr.getError().getStackTrace();
           StackTraceElement[] trimmedStack;
           if (TRIM_AMBUSH_STACK_AWAY) {
@@ -172,7 +172,7 @@ public class ScriptRunner extends AbstractScriptFactoryInitializer {
           } else {
             out("Step " + e.getValue().get(0).getDescription() + " failed due to:");
           }
-          out(e.getKey() + StringUtils.NEW_LINE);
+          out(e.getKey() + System.lineSeparator());
         }
       }
     }
