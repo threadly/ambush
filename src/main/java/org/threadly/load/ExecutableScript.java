@@ -162,7 +162,11 @@ public class ExecutableScript {
     public void registerFailureNotification(Runnable listener) {
       synchronized (failureListeners) {
         if (markedFailure.get()) {
-          ExceptionUtils.runRunnable(listener);
+          try {
+            listener.run();
+          } catch (Throwable t) {
+            ExceptionUtils.handleException(t);
+          }
         } else {
           failureListeners.add(listener);
         }
@@ -174,7 +178,11 @@ public class ExecutableScript {
       if (! markedFailure.get() && markedFailure.compareAndSet(false, true)) {
         synchronized (failureListeners) {
           for (Runnable r :  failureListeners) {
-            ExceptionUtils.runRunnable(r);
+            try {
+              r.run();
+            } catch (Throwable t) {
+              ExceptionUtils.handleException(t);
+            }
           }
           failureListeners.clear();
         }
