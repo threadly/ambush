@@ -10,14 +10,11 @@ repositories {
   }
 }
 
-group = 'org.threadly'
-version = '0.1-SNAPSHOT'
-
 dependencies {
   testCompile group: 'junit', name: 'junit', version: '4.12'
 
   compile (
-    "org.threadly:threadly:5.+"
+    "org.threadly:threadly:5.22"
   )
 }
 
