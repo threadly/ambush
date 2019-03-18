@@ -141,7 +141,7 @@ public class ExecutableScript {
        * garbage collected, even though we don't have a reference to it.  Thus ensuring we 
        * cleanup our running references.
        */
-      completionFuture.addListener(new Runnable() {
+      completionFuture.listener(new Runnable() {
         @Override
         public void run() {
           limiter = null;
@@ -225,7 +225,7 @@ public class ExecutableScript {
        * cleanup our running references.
        */
       completionFuture = FutureUtils.makeCompleteFuture(futures);
-      completionFuture.addListener(new Runnable() {
+      completionFuture.listener(new Runnable() {
         @Override
         public void run() {
           scheduler.set(null);

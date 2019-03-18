@@ -146,7 +146,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
     protected void runItem(ExecutionAssistant assistant) {
       for (ExecutionItem chainItem : getSteps()) {
         assistant.executeIfStillRunning(chainItem, true)
-                 .addListener(new ExecutionItemCompletionRunner(chainItem));
+                 .listener(new ExecutionItemCompletionRunner(chainItem));
       }
       // block till all parallel steps finish, or first error
       try {

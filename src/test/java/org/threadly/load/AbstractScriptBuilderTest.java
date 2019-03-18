@@ -43,7 +43,7 @@ public class AbstractScriptBuilderTest {
     builder.build().startScript();
     
     final AsyncVerifier av = new AsyncVerifier();
-    future.addCallback(new FutureCallback<Double>() {
+    future.callback(new FutureCallback<Double>() {
       @Override
       public void handleResult(Double result) {
         av.assertEquals(50., result);

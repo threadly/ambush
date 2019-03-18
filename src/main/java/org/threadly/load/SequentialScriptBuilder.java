@@ -132,7 +132,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
           assistant = assistant.makeCopy();
         }
         ListenableFuture<?> f = assistant.executeIfStillRunning(chainItem, false);
-        f.addListener(new ExecutionItemCompletionRunner(chainItem));
+        f.listener(new ExecutionItemCompletionRunner(chainItem));
         // block till execution is done (and also allow thread to do execution)
         try {
           f.get();
