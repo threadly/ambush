@@ -14,12 +14,12 @@ dependencies {
   testCompile group: 'junit', name: 'junit', version: '4.12'
 
   compile (
-    "org.threadly:threadly:5.34"
+    "org.threadly:threadly:5.40"
   )
 }
 
 compileJava {
-  options.compilerArgs << "-Xlint:all" << "-Werror"
+  options.compilerArgs << "-Xlint:all"// << "-Werror"
 }
 
 compileTestJava {
@@ -44,10 +44,6 @@ test {
 build.dependsOn jacocoTestReport
 
 jacocoTestReport {
-  doFirst {
-    classDirectories = fileTree(dir: 'build/classes/java/main', include: 'org/threadly/**')
-    sourceDirectories = fileTree(dir: 'src/main/java', include: 'org/threadly/**')
-  }
   reports {
     csv.enabled = false
     xml.enabled = true

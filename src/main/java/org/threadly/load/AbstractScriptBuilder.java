@@ -13,6 +13,7 @@ import org.threadly.load.ExecutableScript.ExecutionItem;
 import org.threadly.load.ExecutableScript.ExecutionItem.ChildItems;
 import org.threadly.load.ExecutableScript.ExecutionItem.StepStartHandler;
 import org.threadly.util.ArgumentVerifier;
+import org.threadly.util.ArrayIterator;
 import org.threadly.util.Clock;
 import org.threadly.util.ExceptionUtils;
 
@@ -275,7 +276,7 @@ public abstract class AbstractScriptBuilder {
     @Override
     public Iterator<ExecutionItem> iterator() {
       if (hasChildren()) {
-        return Arrays.asList(items).iterator();
+        return ArrayIterator.makeIterator(items);
       } else {
         return Collections.<ExecutionItem>emptyList().iterator();
       }
