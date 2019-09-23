@@ -125,26 +125,37 @@ public class ScriptRunner extends AbstractScriptFactoryInitializer {
       out(fails.size() + " STEPS FAILED!!" + System.lineSeparator());
       {
         Iterator<StepResult> it = fails.iterator();
+        StringBuilder sb = new StringBuilder();
         while (it.hasNext()) {
+          sb.setLength(0);
           StepResult tr = it.next();
-          StringBuilder sb = new StringBuilder();
-          sb.append(tr.getError().toString()).append(System.lineSeparator());
-          StackTraceElement[] origStack = tr.getError().getStackTrace();
-          StackTraceElement[] trimmedStack;
-          if (TRIM_AMBUSH_STACK_AWAY) {
-            String packageStr = ScriptRunner.class.getPackage().getName();
-            int i = 1;
-            for (; i < origStack.length; i++) {
-              if (origStack[i].getClassName().startsWith(packageStr)) {
-                break;
-              }
+          Throwable t = tr.getError();
+          while (t != null) {
+            if (sb.length() > 0) {
+              // will have line separator from last loop
+              sb.append("Caused by: ");
             }
-            trimmedStack = Arrays.copyOf(origStack, i);
-          } else {
-            trimmedStack = origStack;
+            
+            sb.append(t.toString()).append(System.lineSeparator());
+            StackTraceElement[] origStack = t.getStackTrace();
+            StackTraceElement[] trimmedStack;
+            if (TRIM_AMBUSH_STACK_AWAY) {
+              String packageStr = ScriptRunner.class.getPackage().getName();
+              int i = 1;
+              for (; i < origStack.length; i++) {
+                if (origStack[i].getClassName().startsWith(packageStr)) {
+                  break;
+                }
+              }
+              trimmedStack = Arrays.copyOf(origStack, i);
+            } else {
+              trimmedStack = origStack;
+            }
+            ExceptionUtils.writeStackTo(trimmedStack, sb);
+            
+            t = t.getCause();
           }
-          ExceptionUtils.writeStackTo(trimmedStack, sb);
-          String errorMsg = sb.toString(); 
+          String errorMsg = sb.toString();
           List<StepResult> currentSteps = failureCountMap.get(errorMsg);
           if (currentSteps == null) {
             currentSteps = new ArrayList<StepResult>(1);
