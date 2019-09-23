@@ -8,7 +8,7 @@ Get ambush from maven central:
 <dependency>
 	<groupId>org.threadly</groupId>
 	<artifactId>ambush</artifactId>
-	<version>0.1</version>
+	<version>0.2</version>
 </dependency>
 ```
 
