@@ -1,12 +1,10 @@
 package org.threadly.load;
 
 /**
- * <p>Indicates what type of step this is.  Use of {@link #Maintenance} and 
+ * Indicates what type of step this is.  Use of {@link #Maintenance} and 
  * {@link #AsyncMaintenance} allows you to do operations without having the statistics and results 
  * included in the final results.  In addition the use of specifically {@link #AsyncMaintenance} 
- * allows ambush to try and reduce the impact of running the step.</p>
- * 
- * @author jent - Mike Jensen
+ * allows ambush to try and reduce the impact of running the step.
  */
 public enum ScriptStepType {
   /**

@@ -9,9 +9,11 @@ import org.threadly.load.ExecutableScript.ExecutionItem.StepStartHandler;
 import org.threadly.util.ExceptionUtils;
 
 /**
- * <p>A builder which's added steps will all be executed in sequence.</p>
- * 
- * @author jent - Mike Jensen
+ * A builder which's added steps will all be executed in sequence.  Typically this is constructed 
+ * with {@link #SequentialScriptBuilder()}, and then steps are added using 
+ * {@link #addStep(ScriptStep)}.  You can also add other builders, for example to add a step which 
+ * is compromised of a bunch of parallel steps you can pass in an already constructed 
+ * {@link ParallelScriptBuilder} to {@link #addSteps(ParallelScriptBuilder)}.
  */
 public class SequentialScriptBuilder extends AbstractScriptBuilder {
   protected final SequentialStep currentStep;
@@ -78,7 +80,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
    * Adds a set of steps to be run sequentially.  These sequential steps wont be started until all 
    * previously added steps have completed.  The execution graph of the provided steps will be 
    * maintained.  Future steps wont be executed till all provided steps are complete.
-   * 
+   * <p>
    * The provided builder can not be modified after being provided.  It also can not be provided 
    * as steps again.  If needing to provide again, please use {@link #makeCopy()}.
    * 
@@ -101,7 +103,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
    * will be maintained.  So the provided parallel steps will run in parallel as built, and 
    * future steps added to this builder will not be executed till this provided builder has 
    * finished running.
-   * 
+   * <p>
    * The provided builder can not be modified after being provided.  It also can not be provided 
    * as steps again.  If needing to provide again, please use {@link #makeCopy()}.
    * 
@@ -120,9 +122,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
   }
   
   /**
-   * <p>Collection of steps which will all be executed on this thread, one after another.</p>
-   * 
-   * @author jent - Mike Jensen
+   * Collection of steps which will all be executed on this thread, one after another.
    */
   protected static class SequentialStep extends StepCollectionRunner {
     @Override

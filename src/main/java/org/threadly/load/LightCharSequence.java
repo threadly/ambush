@@ -1,11 +1,9 @@
 package org.threadly.load;
 
 /**
- * <p>A light weight char sequence implementation.  This implementation only holds the char[], and 
+ * A light weight char sequence implementation.  This implementation only holds the char[], and 
  * calculates everything lazily.  Thus saving heap usage by giving up possibly more computation 
- * complexity.</p>
- * 
- * @author jent - Mike Jensen
+ * complexity.
  */
 public class LightCharSequence implements CharSequence {
   private static final int HASH_START_PRIME = 31;

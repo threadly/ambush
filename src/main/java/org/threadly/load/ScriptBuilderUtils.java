@@ -12,9 +12,7 @@ import org.threadly.load.ExecutableScript.ExecutionItem.StepStartHandler;
 import org.threadly.util.Pair;
 
 /**
- * <p>Class for helping in construct more sophisticated test and graph structures.</p>
- * 
- * @author jent - Mike Jensen
+ * Class for helping in construct more sophisticated test and graph structures.
  */
 public class ScriptBuilderUtils {
   /**
@@ -23,15 +21,15 @@ public class ScriptBuilderUtils {
    * smaller step chains introduce pauses, progressing only as the longest chain progresses.  This 
    * does not mean that the chains will absolutely complete at the same time, depending on the 
    * variations in step invocation time, there will be variations on chain completion time.  
-   * 
+   * <p>
    * For example if a chain has few steps, but long execution times, this will do nothing to 
    * ensure a consistent rate.  
-   * 
+   * <p>
    * This can be very useful if your trying to reproduce production like traffic.  For example you 
    * could create a parallel chain for each API endpoint.  You can have the count of each script 
    * builder (and thus each endpoint) in proportion based off your production usage.  This will 
    * then be reproducing these calls in proportion, rather than just let the short chains end fast.  
-   * 
+   * <p>
    * An alternate method to produce a similar result, that may be more suited for same cases (for 
    * example when step invocation time varies dramatically), would be to allow all chains to 
    * execute freely, timing how long each chain takes.  Then apply a rate limit on chains which 
@@ -117,10 +115,8 @@ public class ScriptBuilderUtils {
   }
   
   /**
-   * <p>Signal acceptor that {@link RunSignalSender} can invoke into.  This blocks execution 
-   * from happening until enough signals have been accumulated.</p>
-   * 
-   * @author jent - Mike Jensen
+   * Signal acceptor that {@link RunSignalSender} can invoke into.  This blocks execution 
+   * from happening until enough signals have been accumulated.
    */
   private static class RunSignalAcceptor implements StepStartHandler {
     private final int neededSignalCountPerStep;
@@ -171,10 +167,8 @@ public class ScriptBuilderUtils {
   }
   
   /**
-   * <p>Signal sender into {@link RunSignalAcceptor} to indicate that a step has started 
-   * execution.  This is used for flow control of steps dependent on {@link RunSignalAcceptor}.</p>
-   * 
-   * @author jent - Mike Jensen
+   * Signal sender into {@link RunSignalAcceptor} to indicate that a step has started 
+   * execution.  This is used for flow control of steps dependent on {@link RunSignalAcceptor}.
    */
   private static class RunSignalSender implements StepStartHandler {
     private final RunSignalAcceptor[] signalAcceptors;

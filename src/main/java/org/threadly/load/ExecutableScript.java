@@ -20,9 +20,7 @@ import org.threadly.util.ArgumentVerifier;
 import org.threadly.util.ExceptionUtils;
 
 /**
- * <p>This class handles the execution of a completely generated execution script.</p>
- * 
- * @author jent - Mike Jensen
+ * This class handles the execution of a completely generated execution script.
  */
 public class ExecutableScript {
   private static final int MAXIMUM_PRESTART_THREAD_COUNT = 1000;
@@ -34,7 +32,7 @@ public class ExecutableScript {
   /**
    * Constructs a new {@link ExecutableScript}.  If the minimum threads needed don't match the 
    * execution graph provided, it may restrict load, or never complete.  
-   * 
+   * <p>
    * Execution will not proceed to the next step until the previous step has fully completed.
    * 
    * @param neededThreadQty Minimum number of threads to execute provided steps
@@ -63,7 +61,7 @@ public class ExecutableScript {
   /**
    * Starts the execution of the script.  It will traverse through the execution graph an execute 
    * things as previously defined by using the builder.  
-   * 
+   * <p>
    * This returns a collection of futures.  If an execution step was executed, the future will 
    * return a {@link StepResult}.  That {@link StepResult} will indicate either a successful or 
    * failure in execution.  If a failure does occur then future test steps will NOT be executed.  
@@ -115,9 +113,7 @@ public class ExecutableScript {
   }
   
   /**
-   * <p>Small class for managing access and needs from running script steps.</p>
-   * 
-   * @author jent - Mike Jensen
+   * Small class for managing access and needs from running script steps.
    */
   private static class ScriptAssistant implements ExecutionItem.ExecutionAssistant {
     private final AtomicBoolean running;
@@ -301,10 +297,8 @@ public class ExecutableScript {
   }
   
   /**
-   * <p>Interface for chain item, all items provided for execution must implement this interface.  
-   * This will require test steps to be wrapped in a class which provides this functionality.</p>
-   * 
-   * @author jent - Mike Jensen
+   * Interface for chain item, all items provided for execution must implement this interface.  
+   * This will require test steps to be wrapped in a class which provides this functionality.
    */
   protected interface ExecutionItem {
     /**
@@ -322,6 +316,9 @@ public class ExecutableScript {
      */
     public void prepareForRun();
     
+    /**
+     * Called when the execution has completed, allowing for any potential cleanup.
+     */
     public void runComplete();
 
     /**
@@ -376,10 +373,8 @@ public class ExecutableScript {
     public ChildItems getChildItems();
     
     /**
-     * <p>Class which represents child items which may be executed by this instance of an 
-     * {@link ExecutionItem}.</p>
-     * 
-     * @author jent - Mike Jensen
+     * Class which represents child items which may be executed by this instance of an 
+     * {@link ExecutionItem}.
      */
     public interface ChildItems extends Iterable<ExecutionItem> {
       /**
@@ -408,10 +403,8 @@ public class ExecutableScript {
     }
     
     /**
-     * <p>Class passed to the test item at the start of execution.  This can provide information 
-     * and facilities it can use to perform it's execution.</p>
-     * 
-     * @author jent - Mike Jensen
+     * Class passed to the test item at the start of execution.  This can provide information 
+     * and facilities it can use to perform it's execution.
      */
     public interface ExecutionAssistant {
       /**
@@ -483,12 +476,10 @@ public class ExecutableScript {
     }
     
     /**
-     * <p>Interface to be invoked if set on a step at start.  This can be used for multiple 
+     * Interface to be invoked if set on a step at start.  This can be used for multiple 
      * reasons, one may to just get an indication that a step is ready to execute.  Another may be 
      * to set a pre-run condition.  Meaning that this could prevent step execution, and just be 
-     * invoked to indicate that a step is ready to execute.</p>
-     * 
-     * @author jent - Mike Jensen
+     * invoked to indicate that a step is ready to execute.
      */
     public interface StepStartHandler {
       /**

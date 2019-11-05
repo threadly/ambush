@@ -18,10 +18,8 @@ import org.threadly.util.Clock;
 import org.threadly.util.ExceptionUtils;
 
 /**
- * <p>Provides the shared implementation among all execution step builders.  This also defines the 
- * minimum API set that all builders must implement.</p>
- * 
- * @author jent - Mike Jensen
+ * Provides the shared implementation among all execution step builders.  This also defines the 
+ * minimum API set that all builders must implement.
  */
 public abstract class AbstractScriptBuilder {
   private int neededThreadCount;
@@ -38,11 +36,11 @@ public abstract class AbstractScriptBuilder {
    * in the script.  The resulting double provided by the future is the percent of completion at 
    * this moment.  You can easily log this by adding a 
    * {@link org.threadly.concurrent.future.FutureCallback} to the returned future.  
-   * 
+   * <p>
    * If there are steps running in parallel at the time of execution for this progress future it 
    * should be noted the number is a best guess, as no locking occurs during determining the 
    * current progress.  
-   * 
+   * <p>
    * If the script is stopped (likely due to an error or step failure), this returned future will 
    * complete in an error state (ie {@link ListenableFuture#get()} will throw a 
    * {@code ExecutionException}.
@@ -60,10 +58,10 @@ public abstract class AbstractScriptBuilder {
    * which execute AFTER this point in the script.  This is effectively adding a task at this 
    * point in the script that will set an limit on how fast the steps can run.  If you want your 
    * entire script to adher to this limit it must be done before any steps are added.  
-   * 
+   * <p>
    * This allows you to control request rates, allowing you at run time to adjust the rate at 
    * which executions are occurring.  
-   * 
+   * <p>
    * Provide a value of zero to disable this and allow steps to execute as fast as possible.
    * 
    * @param stepsPerSecondLimit Steps per second allowed to execute
@@ -243,10 +241,8 @@ public abstract class AbstractScriptBuilder {
   }
   
   /**
-   * <p>A simple implementation of {@link ChildItems} which takes in a list of items that it is 
-   * holding.</p>
-   * 
-   * @author jent - Mike Jensen
+   * A simple implementation of {@link ChildItems} which takes in a list of items that it is 
+   * holding.
    */
   protected static class ChildItemContainer implements ChildItems {
     protected static final ChildItemContainer EMPTY_CHILD_ITEMS_CONTAINER = new ChildItemContainer();
@@ -284,9 +280,7 @@ public abstract class AbstractScriptBuilder {
   }
   
   /**
-   * <p>{@link ExecutionItem} which changes the limit at which steps can be executed.</p>
-   * 
-   * @author jent - Mike Jensen
+   * {@link ExecutionItem} which changes the limit at which steps can be executed.
    */
   private static class RateAdjustmentStep extends GhostExecutionItem {
     private final double newRateLimit;
@@ -312,9 +306,7 @@ public abstract class AbstractScriptBuilder {
   }
   
   /**
-   * <p>Test step which will report the current running test progress.</p>
-   * 
-   * @author jent - Mike Jensen
+   * Test step which will report the current running test progress.
    */
   private static class ProgressScriptStep extends GhostExecutionItem {
     private final SettableListenableFuture<Double> slf;
@@ -353,10 +345,8 @@ public abstract class AbstractScriptBuilder {
   }
   
   /**
-   * <p>Abstract implementation for any {@link ExecutionItem} which should not be ever seen to the 
-   * user.  Either by a future returned as a step, or copied into a new chain.</p>
-   * 
-   * @author jent - Mike Jensen
+   * Abstract implementation for any {@link ExecutionItem} which should not be ever seen to the 
+   * user.  Either by a future returned as a step, or copied into a new chain.
    */
   protected abstract static class GhostExecutionItem extends AbstractExecutionItem {
     @Override
@@ -391,10 +381,8 @@ public abstract class AbstractScriptBuilder {
   }
   
   /**
-   * <p>Basic abstract implementation for every test step collection to execute it's tests.  This 
-   * also provides the minimum API that any collection of steps must implement.</p>
-   * 
-   * @author jent - Mike Jensen
+   * Basic abstract implementation for every test step collection to execute it's tests.  This 
+   * also provides the minimum API that any collection of steps must implement.
    */
   protected abstract static class StepCollectionRunner extends AbstractExecutionItem {
     private final ArrayList<SettableListenableFuture<StepResult>> futures;
@@ -525,11 +513,9 @@ public abstract class AbstractScriptBuilder {
   }
 
   /**
-   * <p>Implementation for executing a {@link ScriptStep} instance.  This class also represents 
+   * Implementation for executing a {@link ScriptStep} instance.  This class also represents 
    * the future for the test step execution.  If executed it is guaranteed to provide a 
-   * {@link StepResult} (with or without error).</p>
-   * 
-   * @author jent - Mike Jensen
+   * {@link StepResult} (with or without error).
    */
   protected static class ScriptStepRunner extends AbstractExecutionItem {
     protected ScriptStep scriptStep;
@@ -656,10 +642,8 @@ public abstract class AbstractScriptBuilder {
   }
   
   /**
-   * <p>Abstract implementation of {@link ExecutionItem} for common implementation.  One example 
-   * of such common implementation is how the {@link StepStartHandler} behavior is handled.</p>
-   * 
-   * @author jent - Mike Jensen
+   * Abstract implementation of {@link ExecutionItem} for common implementation.  One example 
+   * of such common implementation is how the {@link StepStartHandler} behavior is handled.
    */
   protected abstract static class AbstractExecutionItem implements ExecutionItem {
     private StepStartHandler handler = null;
@@ -686,10 +670,8 @@ public abstract class AbstractScriptBuilder {
   }
   
   /**
-   * <p>Runner to be added as a listener for when an execution item completes.  This runner is 
-   * just so that the complete action can be indicated to the original item.</p>
-   * 
-   * @author jent - Mike Jensen
+   * Runner to be added as a listener for when an execution item completes.  This runner is 
+   * just so that the complete action can be indicated to the original item.
    */
   protected static class ExecutionItemCompletionRunner implements Runnable {
     private final ExecutionItem item;

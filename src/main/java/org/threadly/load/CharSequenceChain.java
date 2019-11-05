@@ -1,9 +1,7 @@
 package org.threadly.load;
 
 /**
- * <p>Char sequence which is built from a chain of sequences.</p>
- * 
- * @author jent - Mike Jensen
+ * Char sequence which is built from a chain of sequences.
  */
 public class CharSequenceChain implements CharSequence {
   private static final int HASH_START_PRIME = 31;

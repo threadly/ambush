@@ -8,10 +8,8 @@ import java.util.Properties;
 import org.threadly.util.StringUtils;
 
 /**
- * <p>Abstract implementation for a class which initializes a factory.  Usually a main class which 
- * is accepting arguments for what and how to construct a {@link ScriptFactory}.</p>
- * 
- * @author jent - Mike Jensen
+ * Abstract implementation for a class which initializes a factory.  Usually a main class which 
+ * is accepting arguments for what and how to construct a {@link ScriptFactory}.
  */
 //extends ParameterStore so extending classes can get parameters easily
 abstract class AbstractScriptFactoryInitializer extends ParameterStore {

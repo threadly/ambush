@@ -15,10 +15,8 @@ import org.threadly.util.ExceptionUtils;
 import org.threadly.util.StringUtils;
 
 /**
- * <p>Class which is designed to invoke a provided {@link ScriptFactory} to build the script.  It 
- * then runs the provided script and informs of any errors which occurred.</p>
- *  
- * @author jent - Mike Jensen
+ * Class which is designed to invoke a provided {@link ScriptFactory} to build the script.  It 
+ * then runs the provided script and informs of any errors which occurred.
  */
 public class ScriptRunner extends AbstractScriptFactoryInitializer {
   private static final double[] RETURNED_PERCENTILES = new double[]{50, 75, 80, 85, 90, 95, 
@@ -99,7 +97,7 @@ public class ScriptRunner extends AbstractScriptFactoryInitializer {
   
   /**
    * Outputs/logs this message/output from the script execution/results.  By default this reports 
-   * to {@link System#out}.println(String).  This can be overridden to use other loggers.
+   * to {@code System.out.println(String)}.  This can be overridden to use other loggers.
    * 
    * @param msg String output from runner
    */

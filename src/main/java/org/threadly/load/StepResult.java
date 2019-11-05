@@ -3,11 +3,9 @@ package org.threadly.load;
 import java.util.concurrent.TimeUnit;
 
 /**
- * <p>Interface which represents the result of an executed test step.  This provides if the test 
+ * Interface which represents the result of an executed test step.  This provides if the test 
  * completed in error (via {@link #getError()} being not {@code null}).  As well as the runtime it 
- * took to execute the test step.</p>
- * 
- * @author jent - Mike Jensen
+ * took to execute the test step.
  */
 public interface StepResult {
   /**
@@ -15,7 +13,7 @@ public interface StepResult {
    * {@link ScriptStepType#AsyncMaintenance}.  In either of those conditions the run time will 
    * always be zero, and thus should not be included in the resulting statistics.
    * 
-   * @return {@code true} if the step was a maintance step
+   * @return {@code true} if the step was a maintenance step
    */
   public boolean wasMaintanceStep();
   

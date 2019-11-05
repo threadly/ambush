@@ -3,9 +3,7 @@ package org.threadly.load;
 import org.threadly.util.ArgumentVerifier;
 
 /**
- * <p>{@link StepResult} implementation which indicates an error condition.</p>
- * 
- * @author jent - Mike Jensen
+ * {@link StepResult} implementation which indicates an error condition.
  */
 class ErrorStepResult extends AbstractStepResult {
   private final Throwable error;

@@ -1,9 +1,7 @@
 package org.threadly.load;
 
 /**
- * <p>{@link StepResult} implementation which indicates a normal completion.</p>
- * 
- * @author jent - Mike Jensen
+ * {@link StepResult} implementation which indicates a normal completion.
  */
 class PassStepResult extends AbstractStepResult {
   public PassStepResult(CharSequence description, long runTimeInNanos) {

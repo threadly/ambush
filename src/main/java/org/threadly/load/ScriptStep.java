@@ -1,9 +1,7 @@
 package org.threadly.load;
 
 /**
- * <p>Interface for the minimum API for any test step to be executed.</p>
- * 
- * @author jent - Mike Jensen
+ * Interface for the required API for any test step to be executed.
  */
 public interface ScriptStep {
   /**

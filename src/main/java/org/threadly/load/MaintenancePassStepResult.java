@@ -1,10 +1,8 @@
 package org.threadly.load;
 
 /**
- * <p>{@link StepResult} implementation which indicates a normal completion of a maintenance 
- * step.</p>
- * 
- * @author jent - Mike Jensen
+ * {@link StepResult} implementation which indicates a normal completion of a maintenance 
+ * step.
  */
 class MaintenancePassStepResult extends PassStepResult {
   public MaintenancePassStepResult(CharSequence description) {

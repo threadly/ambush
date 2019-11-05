@@ -7,14 +7,12 @@ import java.util.Properties;
 import org.threadly.util.ArgumentVerifier;
 
 /**
- * <p>Storage for parameters, providing a common interface for retriving them.  Properties will be 
+ * Storage for parameters, providing a common interface for retriving them.  Properties will be 
  * provided after construction and can be accessed via {@link #getIntValue(String)}, 
  * {@link #getIntValue(String, int)}, {@link #getLongValue(String)}, 
  * {@link #getLongValue(String, long)}, {@link #getDoubleValue(String)}, 
  * {@link #getDoubleValue(String, double)}, {@link #getStringValue(String)} and 
- * {@link #getStringValue(String, String)}.</p>
- *  
- * @author jent - Mike Jensen
+ * {@link #getStringValue(String, String)}.
  */
 public class ParameterStore {
   /**
@@ -92,7 +90,7 @@ public class ParameterStore {
    * builder.  If someone fails to provide a parameter this will be displayed to the CLI so that 
    * it makes it easier to know what was missing.  This is triggered by throwing 
    * {@link ParameterException}.  
-   * 
+   * <p>
    * This map is structured such that the key represents the parameter key.  The value is an 
    * optional description to describe what the key represents.
    * 
@@ -299,13 +297,11 @@ public class ParameterStore {
   }
   
   /**
-   * <p>Exception type that indicates an error with one of the parameters.  This most commonly 
-   * would be a missing required value, but it may also represent invalid data provided.</p>
-   * 
-   * <p>When used inside {@link ScriptRunner} it will cause a description of set parameters 
-   * provided by {@link #getPossibleParameters()} to be printed to the user.</p>
-   * 
-   * @author jent - Mike Jensen
+   * Exception type that indicates an error with one of the parameters.  This most commonly 
+   * would be a missing required value, but it may also represent invalid data provided.
+   * <p>
+   * When used inside {@link ScriptRunner} it will cause a description of set parameters 
+   * provided by {@link #getPossibleParameters()} to be printed to the user.
    */
   public static class ParameterException extends RuntimeException {
     private static final long serialVersionUID = -1913265153770464976L;

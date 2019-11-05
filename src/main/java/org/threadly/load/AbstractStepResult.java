@@ -3,9 +3,7 @@ package org.threadly.load;
 import java.util.concurrent.TimeUnit;
 
 /**
- * <p>Abstract implementation for the interface {@link StepResult}.</p>
- * 
- * @author jent - Mike Jensen
+ * Abstract implementation for the interface {@link StepResult}.
  */
 abstract class AbstractStepResult implements StepResult {
   private final CharSequence description;

@@ -8,15 +8,13 @@ import java.util.concurrent.ConcurrentMap;
 import org.threadly.concurrent.collections.ConcurrentArrayList;
 
 /**
- * <p>Class used for de duplicating strings into a more minimal storage form.  This does a more 
+ * Class used for de duplicating strings into a more minimal storage form.  This does a more 
  * aggressive form of reference aggregation than {@link String#intern()}.  And in fact the cache 
- * continues to grow infinitely until {@link CharsDeduplicator#clearCache()} is invoked.</p>
- * 
- * <p>The returned references are not Strings, but rather a reference which only holds the 
+ * continues to grow infinitely until {@link CharsDeduplicator#clearCache()} is invoked.
+ * <p>
+ * The returned references are not Strings, but rather a reference which only holds the 
  * {@code char[]}, all invocations then calculate the result at the time of invocation.  Trading 
- * memory for extra CPU cycles.</p>
- * 
- * @author jent - Mike Jensen
+ * memory for extra CPU cycles.
  */
 public class CharsDeduplicator {
   // TODO - should we make this hold soft references??

@@ -11,9 +11,10 @@ import org.threadly.load.ExecutableScript.ExecutionItem.StepStartHandler;
 import org.threadly.util.Clock;
 
 /**
- * <p>A builder which's added steps will all be executed in parallel.</p>
- * 
- * @author jent - Mike Jensen
+ * A builder which's added steps will all be executed in parallel.  Typically this is constructed 
+ * with {@link #ParallelScriptBuilder()}, and then steps are added using 
+ * {@link #addStep(ScriptStep)}.  You can also add other builders, please see 
+ * {@link #addSteps(SequentialScriptBuilder)}.
  */
 public class ParallelScriptBuilder extends AbstractScriptBuilder {
   protected final ParallelStep currentStep;
@@ -96,7 +97,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
    * graph attached to them is.  So for example if there are 10 sequential steps in this, even 
    * though those steps may run in parallel with other steps provided to this builder, those 10 
    * steps will still run one after another.
-   * 
+   * <p>
    * The provided builder can not be modified after being provided.  It also can not be provided 
    * as steps again.  If needing to provide again, please use {@link #makeCopy()}.
    * 
@@ -118,7 +119,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
    * Adds a set of parallel steps to this builder.  The execution graph for the provided steps 
    * will be maintained.  These parallel steps will be executed in parallel with all other steps 
    * provided to this builder.
-   * 
+   * <p>
    * The provided builder can not be modified after being provided.  It also can not be provided 
    * as steps again.  If needing to provide again, please use {@link #makeCopy()}.
    * 
@@ -137,9 +138,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
   }
   
   /**
-   * <p>Collection of steps which will all be farmed off to the executor as fast as possible.</p>
-   * 
-   * @author jent - Mike Jensen
+   * Collection of steps which will all be farmed off to the executor as fast as possible.
    */
   protected static class ParallelStep extends StepCollectionRunner {
     @Override

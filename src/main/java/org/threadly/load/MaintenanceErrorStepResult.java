@@ -1,10 +1,7 @@
 package org.threadly.load;
 
 /**
- * <p>{@link StepResult} implementation which indicates an error condition during a maintenance 
- * step.</p>
- * 
- * @author jent - Mike Jensen
+ * {@link StepResult} implementation which indicates an error condition during a maintenance step.
  */
 class MaintenanceErrorStepResult extends ErrorStepResult {
   protected MaintenanceErrorStepResult(CharSequence description, Throwable error) {

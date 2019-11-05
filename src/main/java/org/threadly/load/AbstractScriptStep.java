@@ -7,11 +7,9 @@ import org.threadly.util.ArgumentVerifier;
 import org.threadly.util.StringUtils;
 
 /**
- * <p>The basic foundation for a {@link ScriptStep} implementation.  This provides a 
+ * The basic foundation for a {@link ScriptStep} implementation.  This provides a 
  * handler for {@link #getIdentifier()}.  It also adds additional functionality though 
- * {@link #setGlobalParam(String, String)} and {@link #getGlobalParam(String)}.</p>
- * 
- * @author jent - Mike Jensen
+ * {@link #setGlobalParam(String, String)} and {@link #getGlobalParam(String)}.
  */
 public abstract class AbstractScriptStep implements ScriptStep {
   private static final Map<String, String> PARAMS = new ConcurrentHashMap<String, String>();
@@ -19,7 +17,7 @@ public abstract class AbstractScriptStep implements ScriptStep {
   /**
    * Sets a global parameter.  This parameter will be shared among tests.  If tests are setting 
    * this concurrently it is important to know that only the last set will be maintained.
-   * 
+   * <p>
    * This provides a mechanism to share parameters between tests.  For example if one test needs 
    * to pass the result of something to be consumed by a future test, it can be set here, then 
    * retrieved by a future test using {@link #getGlobalParam(String)}.

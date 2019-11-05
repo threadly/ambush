@@ -14,11 +14,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 /**
- * <p>Some utilities for when dealing with a collection of {@link StepResult}'s.  One of the most 
+ * Some utilities for when dealing with a collection of {@link StepResult}'s.  One of the most 
  * notable is {@link #getFailedResult(Collection)} which is an easy way to know if a set of test 
- * steps completed without error.</p>
- * 
- * @author jent - Mike Jensen
+ * steps completed without error.
  */
 public class StepResultCollectionUtils {
   /**
