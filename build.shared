@@ -1,7 +1,6 @@
 apply plugin: 'java'
 apply plugin: 'checkstyle'
 apply plugin: 'jacoco'
-apply plugin: 'maven'
 
 repositories {
   mavenCentral()
@@ -11,10 +10,10 @@ repositories {
 }
 
 dependencies {
-  testCompile group: 'junit', name: 'junit', version: '4.12'
+  testImplementation group: 'junit', name: 'junit', version: '4.12'
 
-  compile (
-    "org.threadly:threadly:5.41"
+  implementation (
+    "org.threadly:threadly:5.42"
   )
 }
 
@@ -61,7 +60,10 @@ jacocoTestReport {
 
 jar {
   manifest {
-    attributes 'Implementation-Title': 'Ambush', 'Implementation-Version': version
+    attributes (
+      'Implementation-Title': 'Ambush', 
+      'Implementation-Version': archiveVersion
+    )
   }
 }
 
