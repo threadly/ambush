@@ -5,5 +5,6 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/threadly"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/java-8-openjdk-amd64"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/threadly-test"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

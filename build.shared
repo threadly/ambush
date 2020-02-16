@@ -10,10 +10,13 @@ repositories {
 }
 
 dependencies {
-  testImplementation group: 'junit', name: 'junit', version: '4.12'
+  testImplementation (
+    "junit:junit:4.13",
+    "org.threadly:threadly-test:1.0"
+  )
 
   implementation (
-    "org.threadly:threadly:5.42"
+    "org.threadly:threadly:6.0"
   )
 }
 
