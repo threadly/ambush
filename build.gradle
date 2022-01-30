@@ -1,5 +1,5 @@
 apply from: 'build.shared'
 
 jar {
-  from configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+  from configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) }
 }

@@ -11,12 +11,12 @@ repositories {
 
 dependencies {
   testImplementation (
-    "junit:junit:4.13",
+    "junit:junit:4.13.2",
     "org.threadly:threadly-test:1.0"
   )
 
   implementation (
-    "org.threadly:threadly:6.0"
+    "org.threadly:threadly:7.0"
   )
 }
 
@@ -40,17 +40,17 @@ test {
   }
   getReports().getJunitXml().setDestination(file("$buildDir/reports/tests/xml"))
   getReports().getHtml().setDestination(file("$buildDir/reports/tests/html"))
-  setBinResultsDir(file("$buildDir/reports/tests/bin"))
+  setBinaryResultsDirectory(file("$buildDir/reports/tests/bin"))
 }
 
-build.dependsOn jacocoTestReport
+test.dependsOn("jar")
 
 jacocoTestReport {
   reports {
-    csv.enabled = false
-    xml.enabled = true
+    csv.required = false
+    xml.required = true
     xml.destination = file("$buildDir/reports/jacoco/jacoco.xml")
-    html.enabled = true
+    html.required = true
     html.destination = file("$buildDir/reports/jacoco/html")
   }
   doLast {
@@ -60,6 +60,8 @@ jacocoTestReport {
     println "html - $buildDir/reports/jacoco/html/index.html"
   }
 }
+
+test.finalizedBy("jacocoTestReport")
 
 jar {
   manifest {
